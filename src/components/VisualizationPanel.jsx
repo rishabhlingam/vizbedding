@@ -120,10 +120,7 @@ export function VisualizationPanel({ points3D, edges, sentences, onHoverPoint, o
       onMouseEnter={() => setRotate(false)}
       onMouseLeave={() => setRotate(true)}
     >
-      <Canvas
-        camera={{ position: [0, 0, 8], fov: 50 }}
-        onPointerMove={(e) => e.stopPropagation()}
-      >
+      <Canvas camera={{ position: [0, 0, 8], fov: 50 }}>
         <SceneContent
           points3D={points3D}
           edges={edges}
