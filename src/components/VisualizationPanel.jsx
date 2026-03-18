@@ -7,8 +7,51 @@ const SCALE = 2.5;
 const POINT_SIZE = 0.08;
 const LINE_BASE_OPACITY = 0.55;
 const ROTATION_SPEED = 0.0016; // 20% slower than 0.002
+const PLANE_SIZE = 4;
+const PLANE_OPACITY = 0.22;
+const ORIGIN_POINT_RADIUS = 0.06;
 
-function PointsAndLines({ points3D, edges, rotate }) {
+function FilledPlane({ color, rotation }) {
+  return (
+    <mesh rotation={rotation}>
+      <planeGeometry args={[PLANE_SIZE, PLANE_SIZE]} />
+      <meshBasicMaterial
+        color={color}
+        transparent
+        opacity={PLANE_OPACITY}
+        depthWrite={false}
+        side={THREE.DoubleSide}
+      />
+    </mesh>
+  );
+}
+
+function OriginPoint() {
+  return (
+    <mesh position={[0, 0, 0]}>
+      <sphereGeometry args={[ORIGIN_POINT_RADIUS, 16, 16]} />
+      <meshBasicMaterial color="#111" />
+    </mesh>
+  );
+}
+
+function AxisPlanes({ showXZ, showXY, showYZ }) {
+  return (
+    <group>
+      {showXZ && (
+        <FilledPlane color="#44aa88" rotation={[-Math.PI / 2, 0, 0]} />
+      )}
+      {showXY && (
+        <FilledPlane color="#4488cc" rotation={[0, 0, 0]} />
+      )}
+      {showYZ && (
+        <FilledPlane color="#cc6644" rotation={[0, Math.PI / 2, 0]} />
+      )}
+    </group>
+  );
+}
+
+function PointsAndLines({ points3D, edges, rotate, showXZ, showXY, showYZ, showEdges }) {
   const groupRef = useRef();
 
   useFrame(() => {
@@ -50,33 +93,45 @@ function PointsAndLines({ points3D, edges, rotate }) {
       .filter(Boolean);
   }, [edges, points3D]);
 
-  if (points3D.length === 0) return null;
-
   return (
     <group ref={groupRef}>
-      <points geometry={pointGeometry}>
-        <pointsMaterial size={POINT_SIZE} vertexColors sizeAttenuation transparent opacity={0.9} />
-      </points>
-      {lineItems.map(({ geom, i, j }) => (
-          <line key={`${i}-${j}`} geometry={geom}>
-            <lineBasicMaterial
-              color="#333"
-              transparent
-              opacity={LINE_BASE_OPACITY}
-            />
-          </line>
-        ))}
+      <AxisPlanes showXZ={showXZ} showXY={showXY} showYZ={showYZ} />
+      <OriginPoint />
+      {points3D.length > 0 && (
+        <>
+          <points geometry={pointGeometry}>
+            <pointsMaterial size={POINT_SIZE} vertexColors sizeAttenuation transparent opacity={0.9} />
+          </points>
+          {showEdges && lineItems.map(({ geom, i, j }) => (
+            <line key={`${i}-${j}`} geometry={geom}>
+              <lineBasicMaterial
+                color="#333"
+                transparent
+                opacity={LINE_BASE_OPACITY}
+              />
+            </line>
+          ))}
+        </>
+      )}
     </group>
   );
 }
 
-function SceneContent({ points3D, edges, rotate }) {
+function SceneContent({ points3D, edges, rotate, showXZ, showXY, showYZ, showEdges }) {
   return (
     <>
       <ambientLight intensity={0.6} />
       <directionalLight position={[5, 5, 5]} intensity={1} />
       <directionalLight position={[-5, -5, 5]} intensity={0.4} />
-      <PointsAndLines points3D={points3D} edges={edges} rotate={rotate} />
+      <PointsAndLines
+        points3D={points3D}
+        edges={edges}
+        rotate={rotate}
+        showXZ={showXZ}
+        showXY={showXY}
+        showYZ={showYZ}
+        showEdges={showEdges}
+      />
       <OrbitControls enableDamping dampingFactor={0.05} />
     </>
   );
@@ -84,6 +139,10 @@ function SceneContent({ points3D, edges, rotate }) {
 
 export function VisualizationPanel({ points3D, edges }) {
   const [rotate, setRotate] = useState(true);
+  const [showXZ, setShowXZ] = useState(true);
+  const [showXY, setShowXY] = useState(true);
+  const [showYZ, setShowYZ] = useState(true);
+  const [showEdges, setShowEdges] = useState(true);
 
   return (
     <div
@@ -91,8 +150,53 @@ export function VisualizationPanel({ points3D, edges }) {
       onMouseEnter={() => setRotate(false)}
       onMouseLeave={() => setRotate(true)}
     >
-      <Canvas camera={{ position: [0, 0, 6], fov: 48 }}>
-        <SceneContent points3D={points3D} edges={edges} rotate={rotate} />
+      <div className="viz-toggles">
+        <label>
+          <input
+            type="checkbox"
+            checked={showXZ}
+            onChange={(e) => setShowXZ(e.target.checked)}
+          />
+          <span className="viz-toggles__swatch viz-toggles__swatch--xz" />
+          XZ plane
+        </label>
+        <label>
+          <input
+            type="checkbox"
+            checked={showXY}
+            onChange={(e) => setShowXY(e.target.checked)}
+          />
+          <span className="viz-toggles__swatch viz-toggles__swatch--xy" />
+          XY plane
+        </label>
+        <label>
+          <input
+            type="checkbox"
+            checked={showYZ}
+            onChange={(e) => setShowYZ(e.target.checked)}
+          />
+          <span className="viz-toggles__swatch viz-toggles__swatch--yz" />
+          YZ plane
+        </label>
+        <label>
+          <input
+            type="checkbox"
+            checked={showEdges}
+            onChange={(e) => setShowEdges(e.target.checked)}
+          />
+          Edges
+        </label>
+      </div>
+      <Canvas camera={{ position: [2, 2, 6], fov: 48 }}>
+        <SceneContent
+          points3D={points3D}
+          edges={edges}
+          rotate={rotate}
+          showXZ={showXZ}
+          showXY={showXY}
+          showYZ={showYZ}
+          showEdges={showEdges}
+        />
       </Canvas>
     </div>
   );
