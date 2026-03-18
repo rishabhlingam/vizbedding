@@ -1,9 +1,20 @@
-import { useRef, useMemo, useState } from 'react';
+import { useRef, useMemo, useState, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 
 const SCALE = 2.5;
+const ANIM_DURATION = 1.4;
+const SIDE_POSITIONS = [
+  [4.5, 0, 0],
+  [-4.5, 0, 0],
+  [0, 4.5, 0],
+  [0, -4.5, 0],
+];
+
+function easeOutCubic(t) {
+  return 1 - Math.pow(1 - t, 3);
+}
 const POINT_SIZE = 0.08;
 const LINE_BASE_OPACITY = 0.55;
 const ROTATION_SPEED = 0.0016; // 20% slower than 0.002
@@ -53,10 +64,74 @@ function AxisPlanes({ showXZ, showXY, showYZ }) {
 
 function PointsAndLines({ points3D, edges, rotate, showXZ, showXY, showYZ, showEdges }) {
   const groupRef = useRef();
+  const pointsRef = useRef();
+  const prevPointsRef = useRef([]);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const animFromRef = useRef(null);
+  const animToRef = useRef(null);
+  const animStartRef = useRef(null);
 
-  useFrame(() => {
-    if (!groupRef.current || !rotate) return;
-    groupRef.current.rotation.y += ROTATION_SPEED;
+  useEffect(() => {
+    if (points3D.length === 0) {
+      prevPointsRef.current = [];
+      return;
+    }
+    const prev = prevPointsRef.current;
+    const isAdd = prev.length > 0 && points3D.length > prev.length;
+
+    if (isAdd && pointsRef.current?.geometry) {
+      const toPositions = points3D.map(([x, y, z]) => [x * SCALE, y * SCALE, z * SCALE]);
+      const fromPositions = prev.map(([x, y, z]) => [x * SCALE, y * SCALE, z * SCALE]);
+      const side = SIDE_POSITIONS[Math.floor(Math.random() * 4)];
+      fromPositions.push([...side]);
+
+      const posAttr = pointsRef.current.geometry.attributes.position;
+      const arr = posAttr.array;
+      for (let i = 0; i < fromPositions.length; i++) {
+        arr[i * 3] = fromPositions[i][0];
+        arr[i * 3 + 1] = fromPositions[i][1];
+        arr[i * 3 + 2] = fromPositions[i][2];
+      }
+      posAttr.needsUpdate = true;
+
+      animFromRef.current = fromPositions;
+      animToRef.current = toPositions;
+      animStartRef.current = null;
+      setIsAnimating(true);
+    }
+
+    prevPointsRef.current = points3D;
+  }, [points3D]);
+
+  useFrame((state) => {
+    if (!groupRef.current) return;
+    if (rotate) groupRef.current.rotation.y += ROTATION_SPEED;
+
+    if (!isAnimating || !animFromRef.current || !animToRef.current || !pointsRef.current?.geometry)
+      return;
+
+    if (animStartRef.current === null) animStartRef.current = state.clock.elapsedTime;
+    const elapsed = state.clock.elapsedTime - animStartRef.current;
+    let t = Math.min(1, elapsed / ANIM_DURATION);
+    t = easeOutCubic(t);
+
+    const posAttr = pointsRef.current.geometry.attributes.position;
+    const arr = posAttr.array;
+    const from = animFromRef.current;
+    const to = animToRef.current;
+
+    for (let i = 0; i < from.length; i++) {
+      arr[i * 3] = from[i][0] + (to[i][0] - from[i][0]) * t;
+      arr[i * 3 + 1] = from[i][1] + (to[i][1] - from[i][1]) * t;
+      arr[i * 3 + 2] = from[i][2] + (to[i][2] - from[i][2]) * t;
+    }
+    posAttr.needsUpdate = true;
+
+    if (t >= 1) {
+      animFromRef.current = null;
+      animToRef.current = null;
+      setIsAnimating(false);
+    }
   });
 
   const pointGeometry = useMemo(() => {
@@ -78,20 +153,46 @@ function PointsAndLines({ points3D, edges, rotate, showXZ, showXY, showYZ, showE
     return geo;
   }, [points3D]);
 
-  const lineItems = useMemo(() => {
-    return edges
-      .map(([i, j, sim]) => {
-        const a = points3D[i];
-        const b = points3D[j];
-        if (!a || !b || i >= points3D.length || j >= points3D.length) return null;
-        const points = [
-          new THREE.Vector3(a[0] * SCALE, a[1] * SCALE, a[2] * SCALE),
-          new THREE.Vector3(b[0] * SCALE, b[1] * SCALE, b[2] * SCALE),
-        ];
-        return { geom: new THREE.BufferGeometry().setFromPoints(points), i, j, sim };
-      })
-      .filter(Boolean);
+  const validEdges = useMemo(() => {
+    return edges.filter(
+      ([i, j]) => i < points3D.length && j < points3D.length
+    );
   }, [edges, points3D]);
+
+  const lineSegmentsGeo = useMemo(() => {
+    const maxSegments = validEdges.length;
+    const pos = new Float32Array(maxSegments * 2 * 3);
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    return geo;
+  }, [validEdges.length]);
+
+  const lineSegmentsRef = useRef();
+
+  useFrame(() => {
+    if (!showEdges || points3D.length === 0 || !lineSegmentsRef.current?.geometry || !pointsRef.current?.geometry)
+      return;
+
+    const posAttr = lineSegmentsRef.current.geometry.attributes.position;
+    const posArr = posAttr.array;
+    const pointPositions = pointsRef.current.geometry.attributes.position.array;
+    const newPointIndex = points3D.length - 1;
+
+    let idx = 0;
+    for (const [i, j] of validEdges) {
+      if (isAnimating && (i === newPointIndex || j === newPointIndex)) continue;
+
+      posArr[idx * 6] = pointPositions[i * 3];
+      posArr[idx * 6 + 1] = pointPositions[i * 3 + 1];
+      posArr[idx * 6 + 2] = pointPositions[i * 3 + 2];
+      posArr[idx * 6 + 3] = pointPositions[j * 3];
+      posArr[idx * 6 + 4] = pointPositions[j * 3 + 1];
+      posArr[idx * 6 + 5] = pointPositions[j * 3 + 2];
+      idx++;
+    }
+    posAttr.needsUpdate = true;
+    lineSegmentsRef.current.geometry.setDrawRange(0, idx * 2);
+  });
 
   return (
     <group ref={groupRef}>
@@ -99,18 +200,18 @@ function PointsAndLines({ points3D, edges, rotate, showXZ, showXY, showYZ, showE
       <OriginPoint />
       {points3D.length > 0 && (
         <>
-          <points geometry={pointGeometry}>
+          <points ref={pointsRef} geometry={pointGeometry}>
             <pointsMaterial size={POINT_SIZE} vertexColors sizeAttenuation transparent opacity={0.9} />
           </points>
-          {showEdges && lineItems.map(({ geom, i, j }) => (
-            <line key={`${i}-${j}`} geometry={geom}>
+          {showEdges && (
+            <lineSegments ref={lineSegmentsRef} geometry={lineSegmentsGeo}>
               <lineBasicMaterial
                 color="#333"
                 transparent
                 opacity={LINE_BASE_OPACITY}
               />
-            </line>
-          ))}
+            </lineSegments>
+          )}
         </>
       )}
     </group>
@@ -139,9 +240,9 @@ function SceneContent({ points3D, edges, rotate, showXZ, showXY, showYZ, showEdg
 
 export function VisualizationPanel({ points3D, edges }) {
   const [rotate, setRotate] = useState(true);
-  const [showXZ, setShowXZ] = useState(true);
-  const [showXY, setShowXY] = useState(true);
-  const [showYZ, setShowYZ] = useState(true);
+  const [showXZ, setShowXZ] = useState(false);
+  const [showXY, setShowXY] = useState(false);
+  const [showYZ, setShowYZ] = useState(false);
   const [showEdges, setShowEdges] = useState(true);
 
   return (
