@@ -8,7 +8,7 @@ const POINT_SIZE = 0.08;
 const LINE_BASE_OPACITY = 0.55;
 const ROTATION_SPEED = 0.0016; // 20% slower than 0.002
 
-function PointsAndLines({ points3D, edges, rotate, hoveredPoint, hoveredEdge, onHoverPoint, onHoverEdge }) {
+function PointsAndLines({ points3D, edges, rotate }) {
   const groupRef = useRef();
 
   useFrame(() => {
@@ -54,64 +54,35 @@ function PointsAndLines({ points3D, edges, rotate, hoveredPoint, hoveredEdge, on
 
   return (
     <group ref={groupRef}>
-      <points
-        geometry={pointGeometry}
-        onPointerOver={(e) => {
-          e.stopPropagation();
-          const idx = e.intersections[0]?.index;
-          const { clientX: x, clientY: y } = e.nativeEvent;
-          onHoverPoint?.(idx, x, y);
-        }}
-        onPointerOut={() => onHoverPoint?.(null)}
-      >
+      <points geometry={pointGeometry}>
         <pointsMaterial size={POINT_SIZE} vertexColors sizeAttenuation transparent opacity={0.9} />
       </points>
-      {lineItems.map(({ geom, i, j, sim }) => {
-        const isHovered = hoveredEdge && hoveredEdge[0] === i && hoveredEdge[1] === j;
-        return (
-          <line
-            key={`${i}-${j}`}
-            geometry={geom}
-            onPointerOver={(e) => {
-              e.stopPropagation();
-              const { clientX: x, clientY: y } = e.nativeEvent;
-              onHoverEdge?.([i, j, sim], x, y);
-            }}
-            onPointerOut={() => onHoverEdge?.(null)}
-          >
+      {lineItems.map(({ geom, i, j }) => (
+          <line key={`${i}-${j}`} geometry={geom}>
             <lineBasicMaterial
               color="#333"
               transparent
-              opacity={isHovered ? 0.95 : LINE_BASE_OPACITY}
+              opacity={LINE_BASE_OPACITY}
             />
           </line>
-        );
-      })}
+        ))}
     </group>
   );
 }
 
-function SceneContent({ points3D, edges, rotate, hoveredPoint, hoveredEdge, onHoverPoint, onHoverEdge }) {
+function SceneContent({ points3D, edges, rotate }) {
   return (
     <>
       <ambientLight intensity={0.6} />
       <directionalLight position={[5, 5, 5]} intensity={1} />
       <directionalLight position={[-5, -5, 5]} intensity={0.4} />
-      <PointsAndLines
-        points3D={points3D}
-        edges={edges}
-        rotate={rotate}
-        hoveredPoint={hoveredPoint}
-        hoveredEdge={hoveredEdge}
-        onHoverPoint={onHoverPoint}
-        onHoverEdge={onHoverEdge}
-      />
+      <PointsAndLines points3D={points3D} edges={edges} rotate={rotate} />
       <OrbitControls enableDamping dampingFactor={0.05} />
     </>
   );
 }
 
-export function VisualizationPanel({ points3D, edges, sentences, onHoverPoint, onHoverEdge }) {
+export function VisualizationPanel({ points3D, edges }) {
   const [rotate, setRotate] = useState(true);
 
   return (
@@ -120,15 +91,8 @@ export function VisualizationPanel({ points3D, edges, sentences, onHoverPoint, o
       onMouseEnter={() => setRotate(false)}
       onMouseLeave={() => setRotate(true)}
     >
-      <Canvas camera={{ position: [0, 0, 8], fov: 50 }}>
-        <SceneContent
-          points3D={points3D}
-          edges={edges}
-          rotate={rotate}
-          sentences={sentences}
-          onHoverPoint={onHoverPoint}
-          onHoverEdge={onHoverEdge}
-        />
+      <Canvas camera={{ position: [0, 0, 6], fov: 48 }}>
+        <SceneContent points3D={points3D} edges={edges} rotate={rotate} />
       </Canvas>
     </div>
   );

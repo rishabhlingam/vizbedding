@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { DataEntryPanel } from './components/DataEntryPanel';
 import { VisualizationPanel } from './components/VisualizationPanel';
-import { TooltipOverlay } from './components/TooltipOverlay';
 import {
   computeEmbeddings,
   projectTo3D,
@@ -14,7 +13,6 @@ export default function App() {
   const [sentences, setSentences] = useState(SEED_SENTENCES);
   const [points3D, setPoints3D] = useState([]);
   const [edges, setEdges] = useState([]);
-  const [tooltip, setTooltip] = useState(null);
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState(null);
   const [error, setError] = useState(null);
@@ -62,28 +60,6 @@ export default function App() {
     setSentences((prev) => [...prev, text.trim()]);
   };
 
-  const handleHoverPoint = (index, x, y) => {
-    if (index == null) {
-      setTooltip(null);
-      return;
-    }
-    const content = sentences[index] || '';
-    setTooltip({ x, y, content, sub: null, wrap: true });
-  };
-
-  const handleHoverEdge = (edge, x, y) => {
-    if (!edge) {
-      setTooltip(null);
-      return;
-    }
-    const [i, j, sim] = edge;
-    const s1 = sentences[i] || '';
-    const s2 = sentences[j] || '';
-    const content = `${s1.slice(0, 40)}${s1.length > 40 ? '…' : ''} ↔ ${s2.slice(0, 40)}${s2.length > 40 ? '…' : ''}`;
-    const sub = `Cosine similarity: ${(sim * 100).toFixed(1)}%`;
-    setTooltip({ x, y, content, sub });
-  };
-
   return (
     <div className="app">
       <header className="app-header">
@@ -91,13 +67,7 @@ export default function App() {
       </header>
       <main className="app-main">
         <section className="viz-section">
-          <VisualizationPanel
-            points3D={points3D}
-            edges={edges}
-            sentences={sentences}
-            onHoverPoint={handleHoverPoint}
-            onHoverEdge={handleHoverEdge}
-          />
+          <VisualizationPanel points3D={points3D} edges={edges} />
           {loading && (
             <div className="loading-overlay">
               {progress?.status === 'compute' ? (
@@ -123,7 +93,6 @@ export default function App() {
           />
         </aside>
       </main>
-      <TooltipOverlay tooltip={tooltip} />
     </div>
   );
 }
