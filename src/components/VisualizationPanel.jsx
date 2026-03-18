@@ -1,6 +1,6 @@
 import { useRef, useMemo, useState, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
+import { TrackballControls } from '@react-three/drei';
 import * as THREE from 'three';
 
 const SCALE = 2.5;
@@ -233,7 +233,10 @@ function SceneContent({ points3D, edges, rotate, showXZ, showXY, showYZ, showEdg
         showYZ={showYZ}
         showEdges={showEdges}
       />
-      <OrbitControls enableDamping dampingFactor={0.05} />
+      <TrackballControls
+        target={[0, 0, 0]}
+        dynamicDampingFactor={0.1}
+      />
     </>
   );
 }
