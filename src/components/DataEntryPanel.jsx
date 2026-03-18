@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-export function DataEntryPanel({ sentences, onAddSentence, onUpdateVisualization }) {
+export function DataEntryPanel({ sentences, onAddSentence, onClear }) {
   const [input, setInput] = useState('');
 
   const handleAdd = () => {
@@ -20,8 +20,11 @@ export function DataEntryPanel({ sentences, onAddSentence, onUpdateVisualization
 
   return (
     <div className="data-entry-panel">
+      <button onClick={onClear} className="btn-clear">
+        Clear viz
+      </button>
       <h3>Sentences</h3>
-      <p className="sentence-count">{sentences.length} sentences loaded</p>
+      <p className="sentence-count">{sentences.length} sentences</p>
       <div className="sentence-list">
         {sentences.map((s, i) => (
           <div key={i} className="sentence-row">
@@ -39,9 +42,6 @@ export function DataEntryPanel({ sentences, onAddSentence, onUpdateVisualization
         />
         <button onClick={handleAdd} className="btn-add">
           Add sentence
-        </button>
-        <button onClick={onUpdateVisualization} className="btn-update">
-          Update visualization
         </button>
       </div>
     </div>

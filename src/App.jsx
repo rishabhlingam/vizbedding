@@ -60,6 +60,10 @@ export default function App() {
     setSentences((prev) => [...prev, text.trim()]);
   };
 
+  const handleClear = () => {
+    setSentences([]);
+  };
+
   return (
     <div className="app">
       <header className="app-header">
@@ -89,7 +93,7 @@ export default function App() {
           <DataEntryPanel
             sentences={sentences}
             onAddSentence={handleAddSentence}
-            onUpdateVisualization={updateVisualization}
+            onClear={handleClear}
           />
         </aside>
       </main>

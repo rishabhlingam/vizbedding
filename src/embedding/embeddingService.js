@@ -94,11 +94,12 @@ export function getNearestNeighbors(embeddings, k = 4) {
     const sims = embeddings.map((_, j) =>
       i === j ? -Infinity : cosineSimilarity(embeddings[i], embeddings[j])
     );
-    // Take top-k nearest neighbors by similarity (always show some edges)
+    // Take top-k nearest neighbors by similarity (self has -Inf so sorts last)
     const indices = sims
       .map((s, j) => ({ j, s }))
       .sort((a, b) => b.s - a.s)
-      .slice(1, k + 1)
+      .slice(0, k)
+      .filter((x) => x.j !== i)
       .map((x) => x.j);
     for (const j of indices) {
       if (i < j || !edges.some((e) => e[0] === j && e[1] === i)) {
