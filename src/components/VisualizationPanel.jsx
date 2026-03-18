@@ -1,5 +1,5 @@
 import { useRef, useMemo, useState, useEffect } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { TrackballControls } from '@react-three/drei';
 import * as THREE from 'three';
 
@@ -21,6 +21,8 @@ const ROTATION_SPEED = 0.0016; // 20% slower than 0.002
 const PLANE_SIZE = 4;
 const PLANE_OPACITY = 0.22;
 const ORIGIN_POINT_RADIUS = 0.06;
+const EMPHASIS_RING_RADIUS = 0.25;
+const EMPHASIS_RING_SPIN_SPEED = 0.006;
 
 function FilledPlane({ color, rotation }) {
   return (
@@ -46,6 +48,72 @@ function OriginPoint() {
   );
 }
 
+function EmphasisRing({ selectedIndex, pointsRef, pointCount, rotatingGroupRef }) {
+  const groupRef = useRef();
+  const spinGroupRef = useRef();
+  const lineLoopRef = useRef();
+  const { camera } = useThree();
+  const points = useMemo(() => {
+    const pts = [];
+    const segments = 32;
+    for (let i = 0; i <= segments; i++) {
+      const theta = (i / segments) * Math.PI * 2;
+      pts.push(new THREE.Vector3(
+        EMPHASIS_RING_RADIUS * Math.cos(theta),
+        EMPHASIS_RING_RADIUS * Math.sin(theta),
+        0
+      ));
+    }
+    return pts;
+  }, []);
+
+  const geo = useMemo(() => new THREE.BufferGeometry().setFromPoints(points), [points]);
+  const zAxis = useMemo(() => new THREE.Vector3(0, 0, 1), []);
+  const dirToCamera = useMemo(() => new THREE.Vector3(), []);
+  const worldPos = useMemo(() => new THREE.Vector3(), []);
+  const localPos = useMemo(() => new THREE.Vector3(), []);
+
+  useEffect(() => {
+    if (lineLoopRef.current?.computeLineDistances) {
+      lineLoopRef.current.computeLineDistances();
+    }
+  }, [selectedIndex, pointCount]);
+
+  useFrame(() => {
+    if (!groupRef.current || !spinGroupRef.current || !rotatingGroupRef?.current || selectedIndex == null || selectedIndex >= pointCount || !pointsRef.current?.geometry) return;
+    const posAttr = pointsRef.current.geometry.attributes.position;
+    const arr = posAttr.array;
+    const i = selectedIndex;
+    if (i * 3 + 2 >= arr.length) return;
+
+    const g = groupRef.current;
+    localPos.set(arr[i * 3], arr[i * 3 + 1], arr[i * 3 + 2]);
+    rotatingGroupRef.current.localToWorld(worldPos.copy(localPos));
+    g.position.copy(worldPos);
+
+    dirToCamera.copy(camera.position).sub(worldPos).normalize();
+    g.quaternion.setFromUnitVectors(zAxis, dirToCamera);
+
+    spinGroupRef.current.rotation.z += EMPHASIS_RING_SPIN_SPEED;
+  });
+
+  if (selectedIndex == null || selectedIndex >= pointCount) return null;
+
+  return (
+    <group ref={groupRef}>
+      <group ref={spinGroupRef}>
+        <lineLoop ref={lineLoopRef} geometry={geo}>
+          <lineDashedMaterial
+            color="#1a1a1a"
+            dashSize={0.06}
+            gapSize={0.04}
+          />
+        </lineLoop>
+      </group>
+    </group>
+  );
+}
+
 function AxisPlanes({ showXZ, showXY, showYZ }) {
   return (
     <group>
@@ -62,7 +130,7 @@ function AxisPlanes({ showXZ, showXY, showYZ }) {
   );
 }
 
-function PointsAndLines({ points3D, edges, rotate, showXZ, showXY, showYZ, showEdges }) {
+function PointsAndLines({ points3D, edges, rotate, showXZ, showXY, showYZ, showEdges, selectedIndex }) {
   const groupRef = useRef();
   const pointsRef = useRef();
   const prevPointsRef = useRef([]);
@@ -195,30 +263,40 @@ function PointsAndLines({ points3D, edges, rotate, showXZ, showXY, showYZ, showE
   });
 
   return (
-    <group ref={groupRef}>
-      <AxisPlanes showXZ={showXZ} showXY={showXY} showYZ={showYZ} />
-      <OriginPoint />
-      {points3D.length > 0 && (
-        <>
-          <points ref={pointsRef} geometry={pointGeometry}>
-            <pointsMaterial size={POINT_SIZE} vertexColors sizeAttenuation transparent opacity={0.9} />
-          </points>
-          {showEdges && (
-            <lineSegments ref={lineSegmentsRef} geometry={lineSegmentsGeo}>
-              <lineBasicMaterial
-                color="#333"
-                transparent
-                opacity={LINE_BASE_OPACITY}
-              />
-            </lineSegments>
-          )}
+    <>
+      <group ref={groupRef}>
+        <AxisPlanes showXZ={showXZ} showXY={showXY} showYZ={showYZ} />
+        <OriginPoint />
+        {points3D.length > 0 && (
+          <>
+            <points ref={pointsRef} geometry={pointGeometry}>
+              <pointsMaterial size={POINT_SIZE} vertexColors sizeAttenuation transparent opacity={0.9} />
+            </points>
+            {showEdges && (
+              <lineSegments ref={lineSegmentsRef} geometry={lineSegmentsGeo}>
+                <lineBasicMaterial
+                  color="#333"
+                  transparent
+                  opacity={LINE_BASE_OPACITY}
+                />
+              </lineSegments>
+            )}
         </>
       )}
-    </group>
+      </group>
+      {points3D.length > 0 && (
+        <EmphasisRing
+          selectedIndex={selectedIndex}
+          pointsRef={pointsRef}
+          pointCount={points3D.length}
+          rotatingGroupRef={groupRef}
+        />
+      )}
+    </>
   );
 }
 
-function SceneContent({ points3D, edges, rotate, showXZ, showXY, showYZ, showEdges }) {
+function SceneContent({ points3D, edges, rotate, showXZ, showXY, showYZ, showEdges, selectedIndex }) {
   return (
     <>
       <ambientLight intensity={0.6} />
@@ -232,6 +310,7 @@ function SceneContent({ points3D, edges, rotate, showXZ, showXY, showYZ, showEdg
         showXY={showXY}
         showYZ={showYZ}
         showEdges={showEdges}
+        selectedIndex={selectedIndex}
       />
       <TrackballControls
         target={[0, 0, 0]}
@@ -241,7 +320,7 @@ function SceneContent({ points3D, edges, rotate, showXZ, showXY, showYZ, showEdg
   );
 }
 
-export function VisualizationPanel({ points3D, edges }) {
+export function VisualizationPanel({ points3D, edges, selectedIndex }) {
   const [rotate, setRotate] = useState(true);
   const [showXZ, setShowXZ] = useState(false);
   const [showXY, setShowXY] = useState(false);
@@ -291,7 +370,7 @@ export function VisualizationPanel({ points3D, edges }) {
           Edges
         </label>
       </div>
-      <Canvas camera={{ position: [2, 2, 6], fov: 48 }}>
+      <Canvas camera={{ position: [2, 2, 6], fov: 48 }} frameloop="always">
         <SceneContent
           points3D={points3D}
           edges={edges}
@@ -300,6 +379,7 @@ export function VisualizationPanel({ points3D, edges }) {
           showXY={showXY}
           showYZ={showYZ}
           showEdges={showEdges}
+          selectedIndex={selectedIndex}
         />
       </Canvas>
     </div>

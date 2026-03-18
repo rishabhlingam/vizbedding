@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-export function DataEntryPanel({ sentences, onAddSentence, onClear }) {
+export function DataEntryPanel({ sentences, onAddSentence, onClear, selectedIndex, onSelectSentence }) {
   const [input, setInput] = useState('');
 
   const handleAdd = () => {
@@ -27,7 +27,14 @@ export function DataEntryPanel({ sentences, onAddSentence, onClear }) {
       <p className="sentence-count">{sentences.length} sentences</p>
       <div className="sentence-list">
         {sentences.map((s, i) => (
-          <div key={i} className="sentence-row">
+          <div
+            key={i}
+            className={`sentence-row ${selectedIndex === i ? 'sentence-row--selected' : ''}`}
+            onClick={() => onSelectSentence?.(i)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => e.key === 'Enter' && onSelectSentence?.(i)}
+          >
             {s}
           </div>
         ))}

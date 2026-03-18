@@ -207,6 +207,7 @@ body {
   font-size: 0.78rem;
   line-height: 1.4;
   border-bottom: 1px solid var(--border);
+  cursor: pointer;
 }
 
 .sentence-row:last-child {
@@ -215,6 +216,12 @@ body {
 
 .sentence-row:hover {
   background: rgba(0, 0, 0, 0.03);
+}
+
+.sentence-row--selected {
+  background: rgba(45, 125, 210, 0.12);
+  border-left: 3px solid var(--accent);
+  padding-left: calc(0.5rem - 3px);
 }
 
 .add-section {

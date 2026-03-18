@@ -13,6 +13,7 @@ export default function App() {
   const [sentences, setSentences] = useState(SEED_SENTENCES);
   const [points3D, setPoints3D] = useState([]);
   const [edges, setEdges] = useState([]);
+  const [selectedIndex, setSelectedIndex] = useState(null);
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState(null);
   const [error, setError] = useState(null);
@@ -62,6 +63,11 @@ export default function App() {
 
   const handleClear = () => {
     setSentences([]);
+    setSelectedIndex(null);
+  };
+
+  const handleSelectSentence = (index) => {
+    setSelectedIndex((prev) => (prev === index ? null : index));
   };
 
   return (
@@ -71,7 +77,7 @@ export default function App() {
       </header>
       <main className="app-main">
         <section className="viz-section">
-          <VisualizationPanel points3D={points3D} edges={edges} />
+          <VisualizationPanel points3D={points3D} edges={edges} selectedIndex={selectedIndex} />
           {loading && (
             <div className="loading-overlay">
               {progress?.status === 'compute' ? (
@@ -94,6 +100,8 @@ export default function App() {
             sentences={sentences}
             onAddSentence={handleAddSentence}
             onClear={handleClear}
+            selectedIndex={selectedIndex}
+            onSelectSentence={handleSelectSentence}
           />
         </aside>
       </main>
