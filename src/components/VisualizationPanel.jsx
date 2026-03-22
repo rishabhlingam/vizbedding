@@ -130,7 +130,7 @@ function AxisPlanes({ showXZ, showXY, showYZ }) {
   );
 }
 
-function PointsAndLines({ points3D, edges, rotate, showXZ, showXY, showYZ, showEdges, selectedIndex }) {
+function PointsAndLines({ points3D, edges, rotate, showXZ, showXY, showYZ, showEdges, edgeMode, selectedIndex }) {
   const groupRef = useRef();
   const pointsRef = useRef();
   const prevPointsRef = useRef([]);
@@ -235,31 +235,61 @@ function PointsAndLines({ points3D, edges, rotate, showXZ, showXY, showYZ, showE
     return geo;
   }, [validEdges.length]);
 
+  const centerLineSegmentsGeo = useMemo(() => {
+    const maxSegments = Math.max(1, points3D.length);
+    const pos = new Float32Array(maxSegments * 2 * 3);
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    return geo;
+  }, [points3D.length]);
+
   const lineSegmentsRef = useRef();
+  const centerLineSegmentsRef = useRef();
 
   useFrame(() => {
-    if (!showEdges || points3D.length === 0 || !lineSegmentsRef.current?.geometry || !pointsRef.current?.geometry)
-      return;
+    if (!showEdges || points3D.length === 0 || !pointsRef.current?.geometry) return;
 
-    const posAttr = lineSegmentsRef.current.geometry.attributes.position;
-    const posArr = posAttr.array;
     const pointPositions = pointsRef.current.geometry.attributes.position.array;
     const newPointIndex = points3D.length - 1;
 
-    let idx = 0;
-    for (const [i, j] of validEdges) {
-      if (isAnimating && (i === newPointIndex || j === newPointIndex)) continue;
-
-      posArr[idx * 6] = pointPositions[i * 3];
-      posArr[idx * 6 + 1] = pointPositions[i * 3 + 1];
-      posArr[idx * 6 + 2] = pointPositions[i * 3 + 2];
-      posArr[idx * 6 + 3] = pointPositions[j * 3];
-      posArr[idx * 6 + 4] = pointPositions[j * 3 + 1];
-      posArr[idx * 6 + 5] = pointPositions[j * 3 + 2];
-      idx++;
+    if (edgeMode === 'center' && centerLineSegmentsRef.current?.geometry) {
+      const posAttr = centerLineSegmentsRef.current.geometry.attributes.position;
+      const posArr = posAttr.array;
+      let idx = 0;
+      for (let i = 0; i < points3D.length; i++) {
+        if (isAnimating && i === newPointIndex) continue;
+        const x = pointPositions[i * 3];
+        const y = pointPositions[i * 3 + 1];
+        const z = pointPositions[i * 3 + 2];
+        if (Math.abs(x) < 1e-6 && Math.abs(y) < 1e-6 && Math.abs(z) < 1e-6) continue;
+        posArr[idx * 6] = 0;
+        posArr[idx * 6 + 1] = 0;
+        posArr[idx * 6 + 2] = 0;
+        posArr[idx * 6 + 3] = x;
+        posArr[idx * 6 + 4] = y;
+        posArr[idx * 6 + 5] = z;
+        idx++;
+      }
+      posAttr.needsUpdate = true;
+      centerLineSegmentsRef.current.computeLineDistances();
+      centerLineSegmentsRef.current.geometry.setDrawRange(0, idx * 2);
+    } else if (edgeMode === 'points' && lineSegmentsRef.current?.geometry) {
+      const posAttr = lineSegmentsRef.current.geometry.attributes.position;
+      const posArr = posAttr.array;
+      let idx = 0;
+      for (const [i, j] of validEdges) {
+        if (isAnimating && (i === newPointIndex || j === newPointIndex)) continue;
+        posArr[idx * 6] = pointPositions[i * 3];
+        posArr[idx * 6 + 1] = pointPositions[i * 3 + 1];
+        posArr[idx * 6 + 2] = pointPositions[i * 3 + 2];
+        posArr[idx * 6 + 3] = pointPositions[j * 3];
+        posArr[idx * 6 + 4] = pointPositions[j * 3 + 1];
+        posArr[idx * 6 + 5] = pointPositions[j * 3 + 2];
+        idx++;
+      }
+      posAttr.needsUpdate = true;
+      lineSegmentsRef.current.geometry.setDrawRange(0, idx * 2);
     }
-    posAttr.needsUpdate = true;
-    lineSegmentsRef.current.geometry.setDrawRange(0, idx * 2);
   });
 
   return (
@@ -272,10 +302,21 @@ function PointsAndLines({ points3D, edges, rotate, showXZ, showXY, showYZ, showE
             <points ref={pointsRef} geometry={pointGeometry}>
               <pointsMaterial size={POINT_SIZE} vertexColors sizeAttenuation transparent opacity={0.9} />
             </points>
-            {showEdges && (
+            {showEdges && edgeMode === 'points' && (
               <lineSegments ref={lineSegmentsRef} geometry={lineSegmentsGeo}>
                 <lineBasicMaterial
                   color="#333"
+                  transparent
+                  opacity={LINE_BASE_OPACITY}
+                />
+              </lineSegments>
+            )}
+            {showEdges && edgeMode === 'center' && (
+              <lineSegments ref={centerLineSegmentsRef} geometry={centerLineSegmentsGeo}>
+                <lineDashedMaterial
+                  color="#333"
+                  dashSize={0.08}
+                  gapSize={0.06}
                   transparent
                   opacity={LINE_BASE_OPACITY}
                 />
@@ -296,7 +337,7 @@ function PointsAndLines({ points3D, edges, rotate, showXZ, showXY, showYZ, showE
   );
 }
 
-function SceneContent({ points3D, edges, rotate, showXZ, showXY, showYZ, showEdges, selectedIndex }) {
+function SceneContent({ points3D, edges, rotate, showXZ, showXY, showYZ, showEdges, edgeMode, selectedIndex }) {
   return (
     <>
       <ambientLight intensity={0.6} />
@@ -310,6 +351,7 @@ function SceneContent({ points3D, edges, rotate, showXZ, showXY, showYZ, showEdg
         showXY={showXY}
         showYZ={showYZ}
         showEdges={showEdges}
+        edgeMode={edgeMode}
         selectedIndex={selectedIndex}
       />
       <TrackballControls
@@ -326,6 +368,7 @@ export function VisualizationPanel({ points3D, edges, selectedIndex }) {
   const [showXY, setShowXY] = useState(false);
   const [showYZ, setShowYZ] = useState(false);
   const [showEdges, setShowEdges] = useState(true);
+  const [edgeMode, setEdgeMode] = useState('points'); // 'points' | 'center'
 
   return (
     <div
@@ -334,41 +377,43 @@ export function VisualizationPanel({ points3D, edges, selectedIndex }) {
       onMouseLeave={() => setRotate(true)}
     >
       <div className="viz-toggles">
-        <label>
-          <input
-            type="checkbox"
-            checked={showXZ}
-            onChange={(e) => setShowXZ(e.target.checked)}
-          />
-          <span className="viz-toggles__swatch viz-toggles__swatch--xz" />
-          XZ plane
-        </label>
-        <label>
-          <input
-            type="checkbox"
-            checked={showXY}
-            onChange={(e) => setShowXY(e.target.checked)}
-          />
-          <span className="viz-toggles__swatch viz-toggles__swatch--xy" />
-          XY plane
-        </label>
-        <label>
-          <input
-            type="checkbox"
-            checked={showYZ}
-            onChange={(e) => setShowYZ(e.target.checked)}
-          />
-          <span className="viz-toggles__swatch viz-toggles__swatch--yz" />
-          YZ plane
-        </label>
-        <label>
-          <input
-            type="checkbox"
-            checked={showEdges}
-            onChange={(e) => setShowEdges(e.target.checked)}
-          />
-          Edges
-        </label>
+        <div className="viz-toggles__section">
+          <label className="viz-toggles__row">
+            <input type="checkbox" checked={showXZ} onChange={(e) => setShowXZ(e.target.checked)} />
+            <span className="viz-toggles__swatch viz-toggles__swatch--xz" />
+            <span>XZ plane</span>
+          </label>
+          <label className="viz-toggles__row">
+            <input type="checkbox" checked={showXY} onChange={(e) => setShowXY(e.target.checked)} />
+            <span className="viz-toggles__swatch viz-toggles__swatch--xy" />
+            <span>XY plane</span>
+          </label>
+          <label className="viz-toggles__row">
+            <input type="checkbox" checked={showYZ} onChange={(e) => setShowYZ(e.target.checked)} />
+            <span className="viz-toggles__swatch viz-toggles__swatch--yz" />
+            <span>YZ plane</span>
+          </label>
+        </div>
+        <div className="viz-toggles__divider" />
+        <div className="viz-toggles__section">
+          <label className="viz-toggles__row">
+            <input type="checkbox" checked={showEdges} onChange={(e) => setShowEdges(e.target.checked)} />
+            <span>Edges</span>
+          </label>
+          <div className="viz-toggles__edge-mode">
+            <span className="viz-toggles__edge-label">Between points</span>
+            <button
+              type="button"
+              className="viz-toggles__switch"
+              role="switch"
+              aria-checked={edgeMode === 'center'}
+              onClick={() => setEdgeMode((m) => (m === 'points' ? 'center' : 'points'))}
+            >
+              <span className="viz-toggles__switch-thumb" data-checked={edgeMode === 'center'} />
+            </button>
+            <span className="viz-toggles__edge-label">From center</span>
+          </div>
+        </div>
       </div>
       <Canvas camera={{ position: [2, 2, 6], fov: 48 }} frameloop="always">
         <SceneContent
@@ -379,6 +424,7 @@ export function VisualizationPanel({ points3D, edges, selectedIndex }) {
           showXY={showXY}
           showYZ={showYZ}
           showEdges={showEdges}
+          edgeMode={edgeMode}
           selectedIndex={selectedIndex}
         />
       </Canvas>
