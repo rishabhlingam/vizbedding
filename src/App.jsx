@@ -4,7 +4,7 @@ import { VisualizationPanel } from './components/VisualizationPanel';
 import {
   computeEmbeddings,
   projectTo3D,
-  getNearestNeighbors,
+  getCompleteGraphEdges,
 } from './embedding/embeddingService';
 import { SEED_SENTENCES } from './data/seedSentences';
 import './App.css';
@@ -37,7 +37,7 @@ export default function App() {
         return;
       }
       const positions = projectTo3D(embeddings);
-      const edgeList = getNearestNeighbors(embeddings, 4);
+      const edgeList = getCompleteGraphEdges(embeddings);
       setPoints3D(positions);
       setEdges(edgeList);
     } catch (err) {

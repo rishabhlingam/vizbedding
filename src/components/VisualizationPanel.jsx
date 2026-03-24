@@ -526,7 +526,7 @@ function SceneContent({
 export function VisualizationPanel({ points3D, edges, selectedIndex }) {
   const [pointerInsidePanel, setPointerInsidePanel] = useState(false);
   const [canvasDragging, setCanvasDragging] = useState(false);
-  const [referenceFrameMode, setReferenceFrameMode] = useState('planes'); // 'planes' | 'axes'
+  const [referenceFrameMode, setReferenceFrameMode] = useState('axes'); // 'planes' | 'axes'
   const [showXZ, setShowXZ] = useState(false);
   const [showXY, setShowXY] = useState(false);
   const [showYZ, setShowYZ] = useState(false);

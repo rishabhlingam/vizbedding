@@ -110,6 +110,18 @@ export function getNearestNeighbors(embeddings, k = 4) {
   return edges;
 }
 
+/** One edge per unordered pair (i, j), with cosine similarity as weight. */
+export function getCompleteGraphEdges(embeddings) {
+  const n = embeddings.length;
+  const edges = [];
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      edges.push([i, j, cosineSimilarity(embeddings[i], embeddings[j])]);
+    }
+  }
+  return edges;
+}
+
 export function projectTo3D(embeddings) {
   const arr = embeddings.map((e) => Array.from(e));
   return pcaTo3D(arr, 3);
