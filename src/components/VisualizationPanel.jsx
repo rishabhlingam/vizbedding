@@ -28,6 +28,8 @@ function scalePoint([x, y, z]) {
 const POINT_SIZE = 0.08;
 const LINE_BASE_OPACITY = 0.55;
 const ROTATION_SPEED = 0.0016;
+const HOVER_AMPLITUDE = 0.11;
+const HOVER_SPEED = 1.35;
 const PLANE_SIZE = 4;
 const PLANE_OPACITY = 0.22;
 const AXIS_LENGTH = 2.4;
@@ -240,7 +242,8 @@ function AxisLines({ showAxisX, showAxisY, showAxisZ }) {
 function PointsAndLines({
   points3D,
   edges,
-  rotate,
+  autoRotateY,
+  hoverBob,
   referenceFrameMode,
   showXZ,
   showXY,
@@ -294,7 +297,16 @@ function PointsAndLines({
 
   useFrame((state) => {
     if (!groupRef.current) return;
-    if (rotate) groupRef.current.rotation.y += ROTATION_SPEED;
+
+    if (autoRotateY) {
+      groupRef.current.rotation.y += ROTATION_SPEED;
+      groupRef.current.position.y = 0;
+    } else if (hoverBob) {
+      groupRef.current.position.y =
+        HOVER_AMPLITUDE * Math.sin(state.clock.elapsedTime * HOVER_SPEED);
+    } else {
+      groupRef.current.position.y = 0;
+    }
 
     if (!isAnimating || !animFromRef.current || !animToRef.current || !pointsRef.current?.geometry)
       return;
@@ -469,7 +481,8 @@ function PointsAndLines({
 function SceneContent({
   points3D,
   edges,
-  rotate,
+  autoRotateY,
+  hoverBob,
   referenceFrameMode,
   showXZ,
   showXY,
@@ -489,7 +502,8 @@ function SceneContent({
       <PointsAndLines
         points3D={points3D}
         edges={edges}
-        rotate={rotate}
+        autoRotateY={autoRotateY}
+        hoverBob={hoverBob}
         referenceFrameMode={referenceFrameMode}
         showXZ={showXZ}
         showXY={showXY}
@@ -510,7 +524,8 @@ function SceneContent({
 }
 
 export function VisualizationPanel({ points3D, edges, selectedIndex }) {
-  const [rotate, setRotate] = useState(true);
+  const [pointerInsidePanel, setPointerInsidePanel] = useState(false);
+  const [canvasDragging, setCanvasDragging] = useState(false);
   const [referenceFrameMode, setReferenceFrameMode] = useState('planes'); // 'planes' | 'axes'
   const [showXZ, setShowXZ] = useState(false);
   const [showXY, setShowXY] = useState(false);
@@ -521,11 +536,27 @@ export function VisualizationPanel({ points3D, edges, selectedIndex }) {
   const [showEdges, setShowEdges] = useState(true);
   const [edgeMode, setEdgeMode] = useState('points'); // 'points' | 'center'
 
+  const autoRotateY = !pointerInsidePanel;
+  const hoverBob = pointerInsidePanel && !canvasDragging;
+
+  useEffect(() => {
+    const endDrag = () => setCanvasDragging(false);
+    window.addEventListener('pointerup', endDrag);
+    window.addEventListener('pointercancel', endDrag);
+    return () => {
+      window.removeEventListener('pointerup', endDrag);
+      window.removeEventListener('pointercancel', endDrag);
+    };
+  }, []);
+
   return (
     <div
       className="viz-panel"
-      onMouseEnter={() => setRotate(false)}
-      onMouseLeave={() => setRotate(true)}
+      onMouseEnter={() => setPointerInsidePanel(true)}
+      onMouseLeave={() => {
+        setPointerInsidePanel(false);
+        setCanvasDragging(false);
+      }}
     >
       <div className="viz-toggles">
         <div className="viz-toggles__section">
@@ -644,11 +675,16 @@ export function VisualizationPanel({ points3D, edges, selectedIndex }) {
           </div>
         </div>
       </div>
-      <Canvas camera={{ position: [2, 2, 6], fov: 48 }} frameloop="always">
+      <Canvas
+        camera={{ position: [2, 2, 6], fov: 48 }}
+        frameloop="always"
+        onPointerDown={() => setCanvasDragging(true)}
+      >
         <SceneContent
           points3D={points3D}
           edges={edges}
-          rotate={rotate}
+          autoRotateY={autoRotateY}
+          hoverBob={hoverBob}
           referenceFrameMode={referenceFrameMode}
           showXZ={showXZ}
           showXY={showXY}
