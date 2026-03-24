@@ -20,7 +20,7 @@ export function DataEntryPanel({ sentences, onAddSentence, onClear, selectedInde
 
   return (
     <div className="data-entry-panel">
-      <button onClick={onClear} className="btn-clear">
+      <button type="button" onClick={onClear} className="btn-clear">
         Clear viz
       </button>
       <h3>Sentences</h3>
@@ -47,7 +47,7 @@ export function DataEntryPanel({ sentences, onAddSentence, onClear, selectedInde
           placeholder="Enter a sentence..."
           rows={2}
         />
-        <button onClick={handleAdd} className="btn-add">
+        <button type="button" onClick={handleAdd} className="btn-add">
           Add sentence
         </button>
       </div>

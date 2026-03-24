@@ -29,10 +29,7 @@ export default function App() {
     setError(null);
     setProgress({ status: 'loading' });
     try {
-      const { embeddings, sentences: validSentences } = await computeEmbeddings(
-        sentences,
-        setProgress
-      );
+      const { embeddings } = await computeEmbeddings(sentences, setProgress);
       if (embeddings.length === 0) {
         setPoints3D([]);
         setEdges([]);

@@ -83,7 +83,7 @@ body {
   font-size: 0.8rem;
   font-family: inherit;
   pointer-events: auto;
-  min-width: 180px;
+  min-width: 132px;
 }
 
 .viz-toggles__section {
@@ -145,26 +145,23 @@ body {
 .viz-toggles__edge-mode {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 8px;
   background: rgba(0, 0, 0, 0.02);
   border-radius: 6px;
   margin-top: 2px;
 }
 
-.viz-toggles__edge-label {
-  font-size: 0.75rem;
+.viz-toggles__symbol {
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: var(--text-muted);
-  flex: 1;
-  text-align: center;
-}
-
-.viz-toggles__edge-label:first-child {
-  text-align: right;
-}
-
-.viz-toggles__edge-label:last-child {
-  text-align: left;
+  overflow: visible;
 }
 
 .viz-toggles__swatch--axis-x {

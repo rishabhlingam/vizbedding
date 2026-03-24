@@ -2,6 +2,12 @@ import { useRef, useMemo, useState, useEffect } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { TrackballControls } from '@react-three/drei';
 import * as THREE from 'three';
+import {
+  IconPlanes,
+  IconAxes,
+  IconEdgesBetweenPoints,
+  IconEdgesFromCenter,
+} from './VizToggleIcons';
 
 const SCALE = 2.5;
 const ANIM_DURATION = 1.4;
@@ -15,9 +21,13 @@ const SIDE_POSITIONS = [
 function easeOutCubic(t) {
   return 1 - Math.pow(1 - t, 3);
 }
+
+function scalePoint([x, y, z]) {
+  return [x * SCALE, y * SCALE, z * SCALE];
+}
 const POINT_SIZE = 0.08;
 const LINE_BASE_OPACITY = 0.55;
-const ROTATION_SPEED = 0.0016; // 20% slower than 0.002
+const ROTATION_SPEED = 0.0016;
 const PLANE_SIZE = 4;
 const PLANE_OPACITY = 0.22;
 const AXIS_LENGTH = 2.4;
@@ -86,7 +96,16 @@ function EmphasisRing({ selectedIndex, pointsRef, pointCount, rotatingGroupRef }
   }, [selectedIndex, pointCount]);
 
   useFrame(() => {
-    if (!groupRef.current || !spinGroupRef.current || !rotatingGroupRef?.current || selectedIndex == null || selectedIndex >= pointCount || !pointsRef.current?.geometry) return;
+    if (
+      !groupRef.current ||
+      !spinGroupRef.current ||
+      !rotatingGroupRef?.current ||
+      selectedIndex == null ||
+      selectedIndex >= pointCount ||
+      !pointsRef.current?.geometry
+    ) {
+      return;
+    }
     const posAttr = pointsRef.current.geometry.attributes.position;
     const arr = posAttr.array;
     const i = selectedIndex;
@@ -145,32 +164,24 @@ function AxisArrowHead({ position, rotation, color }) {
   );
 }
 
+const AXIS_LINE_MATERIAL = { transparent: true, opacity: 0.85 };
+
+function lineAxisGeometry(coords) {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(coords), 3));
+  return g;
+}
+
 function AxisLines({ showAxisX, showAxisY, showAxisZ }) {
-  const L = AXIS_LENGTH;
   const h = AXIS_ARROW_HEIGHT;
-  const xGeo = useMemo(() => {
-    const g = new THREE.BufferGeometry();
-    g.setAttribute(
-      'position',
-      new THREE.BufferAttribute(new Float32Array([-L, 0, 0, L, 0, 0]), 3)
-    );
-    return g;
-  }, []);
-  const yGeo = useMemo(() => {
-    const g = new THREE.BufferGeometry();
-    g.setAttribute(
-      'position',
-      new THREE.BufferAttribute(new Float32Array([0, -L, 0, 0, L, 0]), 3)
-    );
-    return g;
-  }, []);
-  const zGeo = useMemo(() => {
-    const g = new THREE.BufferGeometry();
-    g.setAttribute(
-      'position',
-      new THREE.BufferAttribute(new Float32Array([0, 0, -L, 0, 0, L]), 3)
-    );
-    return g;
+  const L = AXIS_LENGTH;
+  const { xGeo, yGeo, zGeo } = useMemo(() => {
+    const len = AXIS_LENGTH;
+    return {
+      xGeo: lineAxisGeometry([-len, 0, 0, len, 0, 0]),
+      yGeo: lineAxisGeometry([0, -len, 0, 0, len, 0]),
+      zGeo: lineAxisGeometry([0, 0, -len, 0, 0, len]),
+    };
   }, []);
 
   return (
@@ -178,7 +189,7 @@ function AxisLines({ showAxisX, showAxisY, showAxisZ }) {
       {showAxisX && (
         <>
           <line geometry={xGeo}>
-            <lineBasicMaterial color={AXIS_COLOR_X} transparent opacity={0.85} />
+            <lineBasicMaterial color={AXIS_COLOR_X} {...AXIS_LINE_MATERIAL} />
           </line>
           <AxisArrowHead
             position={[L - h / 2, 0, 0]}
@@ -195,7 +206,7 @@ function AxisLines({ showAxisX, showAxisY, showAxisZ }) {
       {showAxisY && (
         <>
           <line geometry={yGeo}>
-            <lineBasicMaterial color={AXIS_COLOR_Y} transparent opacity={0.85} />
+            <lineBasicMaterial color={AXIS_COLOR_Y} {...AXIS_LINE_MATERIAL} />
           </line>
           <AxisArrowHead position={[0, L - h / 2, 0]} rotation={[0, 0, 0]} color={AXIS_COLOR_Y} />
           <AxisArrowHead
@@ -208,7 +219,7 @@ function AxisLines({ showAxisX, showAxisY, showAxisZ }) {
       {showAxisZ && (
         <>
           <line geometry={zGeo}>
-            <lineBasicMaterial color={AXIS_COLOR_Z} transparent opacity={0.85} />
+            <lineBasicMaterial color={AXIS_COLOR_Z} {...AXIS_LINE_MATERIAL} />
           </line>
           <AxisArrowHead
             position={[0, 0, L - h / 2]}
@@ -258,8 +269,8 @@ function PointsAndLines({
     const isAdd = prev.length > 0 && points3D.length > prev.length;
 
     if (isAdd && pointsRef.current?.geometry) {
-      const toPositions = points3D.map(([x, y, z]) => [x * SCALE, y * SCALE, z * SCALE]);
-      const fromPositions = prev.map(([x, y, z]) => [x * SCALE, y * SCALE, z * SCALE]);
+      const toPositions = points3D.map(scalePoint);
+      const fromPositions = prev.map(scalePoint);
       const side = SIDE_POSITIONS[Math.floor(Math.random() * 4)];
       fromPositions.push([...side]);
 
@@ -317,10 +328,10 @@ function PointsAndLines({
     const colors = new Float32Array(points3D.length * 3);
     const c = new THREE.Color('#000000');
     for (let i = 0; i < points3D.length; i++) {
-      const [x, y, z] = points3D[i];
-      positions[i * 3] = x * SCALE;
-      positions[i * 3 + 1] = y * SCALE;
-      positions[i * 3 + 2] = z * SCALE;
+      const [x, y, z] = scalePoint(points3D[i]);
+      positions[i * 3] = x;
+      positions[i * 3 + 1] = y;
+      positions[i * 3 + 2] = z;
       colors[i * 3] = c.r;
       colors[i * 3 + 1] = c.g;
       colors[i * 3 + 2] = c.b;
@@ -440,8 +451,8 @@ function PointsAndLines({
                 />
               </lineSegments>
             )}
-        </>
-      )}
+          </>
+        )}
       </group>
       {points3D.length > 0 && (
         <EmphasisRing
@@ -518,13 +529,24 @@ export function VisualizationPanel({ points3D, edges, selectedIndex }) {
     >
       <div className="viz-toggles">
         <div className="viz-toggles__section">
-          <div className="viz-toggles__edge-mode">
-            <span className="viz-toggles__edge-label">Planes</span>
+          <div
+            className="viz-toggles__edge-mode"
+            role="group"
+            aria-label="Reference frame"
+          >
+            <span className="viz-toggles__symbol" title="Planes">
+              <IconPlanes />
+            </span>
             <button
               type="button"
               className="viz-toggles__switch"
               role="switch"
               aria-checked={referenceFrameMode === 'axes'}
+              aria-label={
+                referenceFrameMode === 'axes'
+                  ? 'Axes shown; switch to planes'
+                  : 'Planes shown; switch to axes'
+              }
               onClick={() =>
                 setReferenceFrameMode((m) => (m === 'planes' ? 'axes' : 'planes'))
               }
@@ -534,24 +556,26 @@ export function VisualizationPanel({ points3D, edges, selectedIndex }) {
                 data-checked={referenceFrameMode === 'axes'}
               />
             </button>
-            <span className="viz-toggles__edge-label">Axes</span>
+            <span className="viz-toggles__symbol" title="Axes">
+              <IconAxes />
+            </span>
           </div>
           {referenceFrameMode === 'planes' ? (
             <>
               <label className="viz-toggles__row">
                 <input type="checkbox" checked={showXZ} onChange={(e) => setShowXZ(e.target.checked)} />
                 <span className="viz-toggles__swatch viz-toggles__swatch--xz" />
-                <span>XZ plane</span>
+                <span>XZ</span>
               </label>
               <label className="viz-toggles__row">
                 <input type="checkbox" checked={showXY} onChange={(e) => setShowXY(e.target.checked)} />
                 <span className="viz-toggles__swatch viz-toggles__swatch--xy" />
-                <span>XY plane</span>
+                <span>XY</span>
               </label>
               <label className="viz-toggles__row">
                 <input type="checkbox" checked={showYZ} onChange={(e) => setShowYZ(e.target.checked)} />
                 <span className="viz-toggles__swatch viz-toggles__swatch--yz" />
-                <span>YZ plane</span>
+                <span>YZ</span>
               </label>
             </>
           ) : (
@@ -563,7 +587,7 @@ export function VisualizationPanel({ points3D, edges, selectedIndex }) {
                   onChange={(e) => setShowAxisX(e.target.checked)}
                 />
                 <span className="viz-toggles__swatch viz-toggles__swatch--axis-x" />
-                <span>X axis</span>
+                <span>X</span>
               </label>
               <label className="viz-toggles__row">
                 <input
@@ -572,7 +596,7 @@ export function VisualizationPanel({ points3D, edges, selectedIndex }) {
                   onChange={(e) => setShowAxisY(e.target.checked)}
                 />
                 <span className="viz-toggles__swatch viz-toggles__swatch--axis-y" />
-                <span>Y axis</span>
+                <span>Y</span>
               </label>
               <label className="viz-toggles__row">
                 <input
@@ -581,7 +605,7 @@ export function VisualizationPanel({ points3D, edges, selectedIndex }) {
                   onChange={(e) => setShowAxisZ(e.target.checked)}
                 />
                 <span className="viz-toggles__swatch viz-toggles__swatch--axis-z" />
-                <span>Z axis</span>
+                <span>Z</span>
               </label>
             </>
           )}
@@ -592,18 +616,31 @@ export function VisualizationPanel({ points3D, edges, selectedIndex }) {
             <input type="checkbox" checked={showEdges} onChange={(e) => setShowEdges(e.target.checked)} />
             <span>Edges</span>
           </label>
-          <div className="viz-toggles__edge-mode">
-            <span className="viz-toggles__edge-label">Between points</span>
+          <div
+            className="viz-toggles__edge-mode"
+            role="group"
+            aria-label="Edge style"
+          >
+            <span className="viz-toggles__symbol" title="Between points">
+              <IconEdgesBetweenPoints />
+            </span>
             <button
               type="button"
               className="viz-toggles__switch"
               role="switch"
               aria-checked={edgeMode === 'center'}
+              aria-label={
+                edgeMode === 'center'
+                  ? 'Edges from center; switch to between points'
+                  : 'Edges between points; switch to from center'
+              }
               onClick={() => setEdgeMode((m) => (m === 'points' ? 'center' : 'points'))}
             >
               <span className="viz-toggles__switch-thumb" data-checked={edgeMode === 'center'} />
             </button>
-            <span className="viz-toggles__edge-label">From center</span>
+            <span className="viz-toggles__symbol" title="From center">
+              <IconEdgesFromCenter />
+            </span>
           </div>
         </div>
       </div>
