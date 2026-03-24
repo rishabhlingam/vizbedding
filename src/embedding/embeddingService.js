@@ -122,6 +122,36 @@ export function getCompleteGraphEdges(embeddings) {
   return edges;
 }
 
+/**
+ * Edges only between pairs closer than maxDistance in projected 3D (PCA space).
+ * Lets clusters stand out instead of wiring every pair.
+ */
+export function getEdgesWithinDistance(positions, maxDistance, embeddings) {
+  const n = positions.length;
+  if (n < 2) return [];
+  const mdSq = maxDistance * maxDistance;
+  const edges = [];
+  for (let i = 0; i < n; i++) {
+    const pi = positions[i];
+    for (let j = i + 1; j < n; j++) {
+      const pj = positions[j];
+      const dx = pi[0] - pj[0];
+      const dy = pi[1] - pj[1];
+      const dz = pi[2] - pj[2];
+      if (dx * dx + dy * dy + dz * dz <= mdSq) {
+        const w = embeddings
+          ? cosineSimilarity(embeddings[i], embeddings[j])
+          : 1;
+        edges.push([i, j, w]);
+      }
+    }
+  }
+  return edges;
+}
+
+/** PCA-space cutoff; tune to show tighter or looser local neighborhoods. */
+export const DEFAULT_EDGE_MAX_DISTANCE = 0.40;
+
 export function projectTo3D(embeddings) {
   const arr = embeddings.map((e) => Array.from(e));
   return pcaTo3D(arr, 3);

@@ -4,7 +4,8 @@ import { VisualizationPanel } from './components/VisualizationPanel';
 import {
   computeEmbeddings,
   projectTo3D,
-  getCompleteGraphEdges,
+  getEdgesWithinDistance,
+  DEFAULT_EDGE_MAX_DISTANCE,
 } from './embedding/embeddingService';
 import { SEED_SENTENCES } from './data/seedSentences';
 import './App.css';
@@ -37,7 +38,11 @@ export default function App() {
         return;
       }
       const positions = projectTo3D(embeddings);
-      const edgeList = getCompleteGraphEdges(embeddings);
+      const edgeList = getEdgesWithinDistance(
+        positions,
+        DEFAULT_EDGE_MAX_DISTANCE,
+        embeddings
+      );
       setPoints3D(positions);
       setEdges(edgeList);
     } catch (err) {
