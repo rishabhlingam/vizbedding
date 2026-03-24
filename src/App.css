@@ -167,6 +167,18 @@ body {
   text-align: left;
 }
 
+.viz-toggles__swatch--axis-x {
+  background: #c43d3d;
+}
+
+.viz-toggles__swatch--axis-y {
+  background: #3d9b4a;
+}
+
+.viz-toggles__swatch--axis-z {
+  background: #3b7fc7;
+}
+
 .viz-toggles__switch {
   flex-shrink: 0;
   width: 40px;

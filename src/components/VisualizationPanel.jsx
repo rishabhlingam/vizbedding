@@ -20,6 +20,12 @@ const LINE_BASE_OPACITY = 0.55;
 const ROTATION_SPEED = 0.0016; // 20% slower than 0.002
 const PLANE_SIZE = 4;
 const PLANE_OPACITY = 0.22;
+const AXIS_LENGTH = 2.4;
+const AXIS_ARROW_HEIGHT = 0.14;
+const AXIS_ARROW_RADIUS = 0.052;
+const AXIS_COLOR_X = '#c43d3d';
+const AXIS_COLOR_Y = '#3d9b4a';
+const AXIS_COLOR_Z = '#3b7fc7';
 const ORIGIN_POINT_RADIUS = 0.06;
 const EMPHASIS_RING_RADIUS = 0.25;
 const EMPHASIS_RING_SPIN_SPEED = 0.006;
@@ -130,7 +136,111 @@ function AxisPlanes({ showXZ, showXY, showYZ }) {
   );
 }
 
-function PointsAndLines({ points3D, edges, rotate, showXZ, showXY, showYZ, showEdges, edgeMode, selectedIndex }) {
+function AxisArrowHead({ position, rotation, color }) {
+  return (
+    <mesh position={position} rotation={rotation}>
+      <coneGeometry args={[AXIS_ARROW_RADIUS, AXIS_ARROW_HEIGHT, 12]} />
+      <meshBasicMaterial color={color} />
+    </mesh>
+  );
+}
+
+function AxisLines({ showAxisX, showAxisY, showAxisZ }) {
+  const L = AXIS_LENGTH;
+  const h = AXIS_ARROW_HEIGHT;
+  const xGeo = useMemo(() => {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute(
+      'position',
+      new THREE.BufferAttribute(new Float32Array([-L, 0, 0, L, 0, 0]), 3)
+    );
+    return g;
+  }, []);
+  const yGeo = useMemo(() => {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute(
+      'position',
+      new THREE.BufferAttribute(new Float32Array([0, -L, 0, 0, L, 0]), 3)
+    );
+    return g;
+  }, []);
+  const zGeo = useMemo(() => {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute(
+      'position',
+      new THREE.BufferAttribute(new Float32Array([0, 0, -L, 0, 0, L]), 3)
+    );
+    return g;
+  }, []);
+
+  return (
+    <group>
+      {showAxisX && (
+        <>
+          <line geometry={xGeo}>
+            <lineBasicMaterial color={AXIS_COLOR_X} transparent opacity={0.85} />
+          </line>
+          <AxisArrowHead
+            position={[L - h / 2, 0, 0]}
+            rotation={[0, 0, -Math.PI / 2]}
+            color={AXIS_COLOR_X}
+          />
+          <AxisArrowHead
+            position={[-L + h / 2, 0, 0]}
+            rotation={[0, 0, Math.PI / 2]}
+            color={AXIS_COLOR_X}
+          />
+        </>
+      )}
+      {showAxisY && (
+        <>
+          <line geometry={yGeo}>
+            <lineBasicMaterial color={AXIS_COLOR_Y} transparent opacity={0.85} />
+          </line>
+          <AxisArrowHead position={[0, L - h / 2, 0]} rotation={[0, 0, 0]} color={AXIS_COLOR_Y} />
+          <AxisArrowHead
+            position={[0, -L + h / 2, 0]}
+            rotation={[Math.PI, 0, 0]}
+            color={AXIS_COLOR_Y}
+          />
+        </>
+      )}
+      {showAxisZ && (
+        <>
+          <line geometry={zGeo}>
+            <lineBasicMaterial color={AXIS_COLOR_Z} transparent opacity={0.85} />
+          </line>
+          <AxisArrowHead
+            position={[0, 0, L - h / 2]}
+            rotation={[Math.PI / 2, 0, 0]}
+            color={AXIS_COLOR_Z}
+          />
+          <AxisArrowHead
+            position={[0, 0, -L + h / 2]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            color={AXIS_COLOR_Z}
+          />
+        </>
+      )}
+    </group>
+  );
+}
+
+function PointsAndLines({
+  points3D,
+  edges,
+  rotate,
+  referenceFrameMode,
+  showXZ,
+  showXY,
+  showYZ,
+  showAxisX,
+  showAxisY,
+  showAxisZ,
+  showEdges,
+  edgeMode,
+  selectedIndex,
+}) {
   const groupRef = useRef();
   const pointsRef = useRef();
   const prevPointsRef = useRef([]);
@@ -295,7 +405,15 @@ function PointsAndLines({ points3D, edges, rotate, showXZ, showXY, showYZ, showE
   return (
     <>
       <group ref={groupRef}>
-        <AxisPlanes showXZ={showXZ} showXY={showXY} showYZ={showYZ} />
+        {referenceFrameMode === 'planes' ? (
+          <AxisPlanes showXZ={showXZ} showXY={showXY} showYZ={showYZ} />
+        ) : (
+          <AxisLines
+            showAxisX={showAxisX}
+            showAxisY={showAxisY}
+            showAxisZ={showAxisZ}
+          />
+        )}
         <OriginPoint />
         {points3D.length > 0 && (
           <>
@@ -337,7 +455,21 @@ function PointsAndLines({ points3D, edges, rotate, showXZ, showXY, showYZ, showE
   );
 }
 
-function SceneContent({ points3D, edges, rotate, showXZ, showXY, showYZ, showEdges, edgeMode, selectedIndex }) {
+function SceneContent({
+  points3D,
+  edges,
+  rotate,
+  referenceFrameMode,
+  showXZ,
+  showXY,
+  showYZ,
+  showAxisX,
+  showAxisY,
+  showAxisZ,
+  showEdges,
+  edgeMode,
+  selectedIndex,
+}) {
   return (
     <>
       <ambientLight intensity={0.6} />
@@ -347,9 +479,13 @@ function SceneContent({ points3D, edges, rotate, showXZ, showXY, showYZ, showEdg
         points3D={points3D}
         edges={edges}
         rotate={rotate}
+        referenceFrameMode={referenceFrameMode}
         showXZ={showXZ}
         showXY={showXY}
         showYZ={showYZ}
+        showAxisX={showAxisX}
+        showAxisY={showAxisY}
+        showAxisZ={showAxisZ}
         showEdges={showEdges}
         edgeMode={edgeMode}
         selectedIndex={selectedIndex}
@@ -364,9 +500,13 @@ function SceneContent({ points3D, edges, rotate, showXZ, showXY, showYZ, showEdg
 
 export function VisualizationPanel({ points3D, edges, selectedIndex }) {
   const [rotate, setRotate] = useState(true);
+  const [referenceFrameMode, setReferenceFrameMode] = useState('planes'); // 'planes' | 'axes'
   const [showXZ, setShowXZ] = useState(false);
   const [showXY, setShowXY] = useState(false);
   const [showYZ, setShowYZ] = useState(false);
+  const [showAxisX, setShowAxisX] = useState(true);
+  const [showAxisY, setShowAxisY] = useState(true);
+  const [showAxisZ, setShowAxisZ] = useState(true);
   const [showEdges, setShowEdges] = useState(true);
   const [edgeMode, setEdgeMode] = useState('points'); // 'points' | 'center'
 
@@ -378,21 +518,73 @@ export function VisualizationPanel({ points3D, edges, selectedIndex }) {
     >
       <div className="viz-toggles">
         <div className="viz-toggles__section">
-          <label className="viz-toggles__row">
-            <input type="checkbox" checked={showXZ} onChange={(e) => setShowXZ(e.target.checked)} />
-            <span className="viz-toggles__swatch viz-toggles__swatch--xz" />
-            <span>XZ plane</span>
-          </label>
-          <label className="viz-toggles__row">
-            <input type="checkbox" checked={showXY} onChange={(e) => setShowXY(e.target.checked)} />
-            <span className="viz-toggles__swatch viz-toggles__swatch--xy" />
-            <span>XY plane</span>
-          </label>
-          <label className="viz-toggles__row">
-            <input type="checkbox" checked={showYZ} onChange={(e) => setShowYZ(e.target.checked)} />
-            <span className="viz-toggles__swatch viz-toggles__swatch--yz" />
-            <span>YZ plane</span>
-          </label>
+          <div className="viz-toggles__edge-mode">
+            <span className="viz-toggles__edge-label">Planes</span>
+            <button
+              type="button"
+              className="viz-toggles__switch"
+              role="switch"
+              aria-checked={referenceFrameMode === 'axes'}
+              onClick={() =>
+                setReferenceFrameMode((m) => (m === 'planes' ? 'axes' : 'planes'))
+              }
+            >
+              <span
+                className="viz-toggles__switch-thumb"
+                data-checked={referenceFrameMode === 'axes'}
+              />
+            </button>
+            <span className="viz-toggles__edge-label">Axes</span>
+          </div>
+          {referenceFrameMode === 'planes' ? (
+            <>
+              <label className="viz-toggles__row">
+                <input type="checkbox" checked={showXZ} onChange={(e) => setShowXZ(e.target.checked)} />
+                <span className="viz-toggles__swatch viz-toggles__swatch--xz" />
+                <span>XZ plane</span>
+              </label>
+              <label className="viz-toggles__row">
+                <input type="checkbox" checked={showXY} onChange={(e) => setShowXY(e.target.checked)} />
+                <span className="viz-toggles__swatch viz-toggles__swatch--xy" />
+                <span>XY plane</span>
+              </label>
+              <label className="viz-toggles__row">
+                <input type="checkbox" checked={showYZ} onChange={(e) => setShowYZ(e.target.checked)} />
+                <span className="viz-toggles__swatch viz-toggles__swatch--yz" />
+                <span>YZ plane</span>
+              </label>
+            </>
+          ) : (
+            <>
+              <label className="viz-toggles__row">
+                <input
+                  type="checkbox"
+                  checked={showAxisX}
+                  onChange={(e) => setShowAxisX(e.target.checked)}
+                />
+                <span className="viz-toggles__swatch viz-toggles__swatch--axis-x" />
+                <span>X axis</span>
+              </label>
+              <label className="viz-toggles__row">
+                <input
+                  type="checkbox"
+                  checked={showAxisY}
+                  onChange={(e) => setShowAxisY(e.target.checked)}
+                />
+                <span className="viz-toggles__swatch viz-toggles__swatch--axis-y" />
+                <span>Y axis</span>
+              </label>
+              <label className="viz-toggles__row">
+                <input
+                  type="checkbox"
+                  checked={showAxisZ}
+                  onChange={(e) => setShowAxisZ(e.target.checked)}
+                />
+                <span className="viz-toggles__swatch viz-toggles__swatch--axis-z" />
+                <span>Z axis</span>
+              </label>
+            </>
+          )}
         </div>
         <div className="viz-toggles__divider" />
         <div className="viz-toggles__section">
@@ -420,9 +612,13 @@ export function VisualizationPanel({ points3D, edges, selectedIndex }) {
           points3D={points3D}
           edges={edges}
           rotate={rotate}
+          referenceFrameMode={referenceFrameMode}
           showXZ={showXZ}
           showXY={showXY}
           showYZ={showYZ}
+          showAxisX={showAxisX}
+          showAxisY={showAxisY}
+          showAxisZ={showAxisZ}
           showEdges={showEdges}
           edgeMode={edgeMode}
           selectedIndex={selectedIndex}
