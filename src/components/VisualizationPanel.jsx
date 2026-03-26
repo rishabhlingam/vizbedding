@@ -247,6 +247,7 @@ function PointsAndLines({
   clusters,
   autoRotateY,
   hoverBob,
+  coordOverlay,
   referenceFrameMode,
   showXZ,
   showXY,
@@ -261,6 +262,11 @@ function PointsAndLines({
   const groupRef = useRef();
   const pointsRef = useRef();
   const prevPointsRef = useRef([]);
+  const { camera, size } = useThree();
+  const localPos = useMemo(() => new THREE.Vector3(), []);
+  const worldPos = useMemo(() => new THREE.Vector3(), []);
+  const ndcPos = useMemo(() => new THREE.Vector3(), []);
+  const coordOverlayRef = useRef(coordOverlay);
   const isAnimatingRef = useRef(false);
   const animFromRef = useRef(null);
   const animToRef = useRef(null);
@@ -299,6 +305,25 @@ function PointsAndLines({
     prevPointsRef.current = points3D;
   }, [points3D]);
 
+  useEffect(() => {
+    const overlay = coordOverlayRef.current;
+    const labelEl = overlay?.coordLabelRef?.current;
+    if (!labelEl) return;
+
+    if (
+      selectedIndex == null ||
+      selectedIndex < 0 ||
+      selectedIndex >= points3D.length
+    ) {
+      labelEl.style.visibility = 'hidden';
+      return;
+    }
+
+    const [x, y, z] = scalePoint(points3D[selectedIndex]);
+    labelEl.textContent = `(${x.toFixed(2)}, ${y.toFixed(2)}, ${z.toFixed(2)})`;
+    labelEl.style.visibility = 'visible';
+  }, [selectedIndex, points3D]);
+
   useFrame((state) => {
     if (!groupRef.current) return;
 
@@ -310,6 +335,74 @@ function PointsAndLines({
         HOVER_AMPLITUDE * Math.sin(state.clock.elapsedTime * HOVER_SPEED);
     } else {
       groupRef.current.position.y = 0;
+    }
+
+    // Update the fixed horizontal leader segment (screen-space) + the slant segment (connects to selected point).
+    const overlay = coordOverlayRef.current;
+    if (
+      overlay?.leaderHorizLineRef?.current &&
+      overlay?.leaderSlantLineRef?.current &&
+      overlay?.coordLabelRef?.current &&
+      selectedIndex != null &&
+      selectedIndex >= 0 &&
+      selectedIndex < points3D.length &&
+      pointsRef.current?.geometry
+    ) {
+      const horizLine = overlay.leaderHorizLineRef.current;
+      const slantLine = overlay.leaderSlantLineRef.current;
+      const labelEl = overlay.coordLabelRef.current;
+
+      const svgEl = overlay.leaderSvgRef?.current;
+      const svgRect = svgEl?.getBoundingClientRect();
+      const svgW = svgRect?.width ?? size.width;
+      const svgH = svgRect?.height ?? size.height;
+
+      // Leader line placement (screen-space):
+      // - Horizontal segment is fixed.
+      // - Slant segment projects to the selected point.
+      const joinY = svgH * 0.12; // move up near top-right
+
+      // Place the underline near the top-right corner.
+      // We measure the label width and make the horizontal line fully under it.
+      const labelWidth = labelEl.getBoundingClientRect().width || 0;
+      const endX = svgW - 14; // right padding
+      const joinX = Math.max(0, endX - labelWidth);
+
+      horizLine.setAttribute('x1', joinX);
+      horizLine.setAttribute('y1', joinY);
+      horizLine.setAttribute('x2', endX);
+      horizLine.setAttribute('y2', joinY);
+      horizLine.setAttribute('visibility', 'visible');
+
+      // Get selected point's current world position (takes group rotation into account).
+      const posAttr = pointsRef.current.geometry.attributes.position;
+      const arr = posAttr.array;
+      const i = selectedIndex;
+      localPos.set(arr[i * 3], arr[i * 3 + 1], arr[i * 3 + 2]);
+      groupRef.current.localToWorld(worldPos.copy(localPos));
+
+      ndcPos.copy(worldPos).project(camera);
+
+      // If the point is outside the camera frustum, fade the slant line.
+      const inView = ndcPos.z >= -1 && ndcPos.z <= 1;
+      slantLine.setAttribute('visibility', inView ? 'visible' : 'hidden');
+
+      const px = ((ndcPos.x + 1) / 2) * svgW;
+      const py = ((1 - ndcPos.y) / 2) * svgH;
+      // Slant connects to the left end of the horizontal underline.
+      slantLine.setAttribute('x1', joinX);
+      slantLine.setAttribute('y1', joinY);
+      slantLine.setAttribute('x2', px);
+      slantLine.setAttribute('y2', py);
+
+      // Place text above the underline.
+      labelEl.style.left = `${joinX}px`;
+      labelEl.style.top = `${joinY - 16}px`;
+      labelEl.style.visibility = 'visible';
+    } else {
+      overlay?.leaderHorizLineRef?.current?.setAttribute('visibility', 'hidden');
+      overlay?.leaderSlantLineRef?.current?.setAttribute('visibility', 'hidden');
+      if (overlay?.coordLabelRef?.current) overlay.coordLabelRef.current.style.visibility = 'hidden';
     }
 
     if (!isAnimatingRef.current || !animFromRef.current || !animToRef.current || !pointsRef.current?.geometry)
@@ -453,14 +546,7 @@ function PointsAndLines({
             {selectedIndex != null &&
               selectedIndex >= 0 &&
               selectedIndex < points3D.length && (
-                <Html position={scalePoint(points3D[selectedIndex])} center style={{ pointerEvents: 'none' }}>
-                  <div className="coord-label">
-                    {(() => {
-                      const [x, y, z] = scalePoint(points3D[selectedIndex]);
-                      return `(${x.toFixed(2)}, ${y.toFixed(2)}, ${z.toFixed(2)})`;
-                    })()}
-                  </div>
-                </Html>
+                null
               )}
             {showEdges && edgeMode === 'points' && (
               <lineSegments ref={lineSegmentsRef} geometry={lineSegmentsGeo}>
@@ -504,6 +590,7 @@ function SceneContent({
   autoRotateY,
   hoverBob,
   referenceFrameMode,
+  coordOverlay,
   showXZ,
   showXY,
   showYZ,
@@ -527,6 +614,7 @@ function SceneContent({
         clusters={clusters}
         autoRotateY={autoRotateY}
         hoverBob={hoverBob}
+        coordOverlay={coordOverlay}
         referenceFrameMode={referenceFrameMode}
         showXZ={showXZ}
         showXY={showXY}
@@ -560,6 +648,11 @@ export function VisualizationPanel({ points3D, edges, selectedIndex, clusters })
   const [showEdges, setShowEdges] = useState(true);
   const [edgeMode, setEdgeMode] = useState('points'); // 'points' | 'center'
 
+  const leaderSvgRef = useRef();
+  const leaderHorizLineRef = useRef();
+  const leaderSlantLineRef = useRef();
+  const coordLabelRef = useRef();
+
   const autoRotateY = !pointerInsidePanel;
   const hoverBob = pointerInsidePanel && !canvasDragging;
 
@@ -582,6 +675,11 @@ export function VisualizationPanel({ points3D, edges, selectedIndex, clusters })
         setCanvasDragging(false);
       }}
     >
+      <svg ref={leaderSvgRef} className="coord-leader-svg" aria-hidden="true">
+        <line ref={leaderHorizLineRef} x1="0" y1="0" x2="0" y2="0" stroke="rgba(0,0,0,0.55)" strokeWidth="1" visibility="hidden" />
+        <line ref={leaderSlantLineRef} x1="0" y1="0" x2="0" y2="0" stroke="rgba(0,0,0,0.55)" strokeWidth="1" visibility="hidden" />
+      </svg>
+      <div ref={coordLabelRef} className="coord-leader-text" />
       <div className="viz-toggles">
         <div className="viz-toggles__section">
           <div
@@ -721,6 +819,12 @@ export function VisualizationPanel({ points3D, edges, selectedIndex, clusters })
           showEdges={showEdges}
           edgeMode={edgeMode}
           selectedIndex={selectedIndex}
+          coordOverlay={{
+            leaderSvgRef,
+            leaderHorizLineRef,
+            leaderSlantLineRef,
+            coordLabelRef,
+          }}
         />
       </Canvas>
     </div>
