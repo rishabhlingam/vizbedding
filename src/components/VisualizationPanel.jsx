@@ -33,7 +33,7 @@ function easeOutCubic(t) {
 function scalePoint([x, y, z]) {
   return [x * SCALE, y * SCALE, z * SCALE];
 }
-const POINT_SIZE = 0.08;
+const POINT_SIZE = 0.25;
 const LINE_BASE_OPACITY = 0.55;
 const ROTATION_SPEED = 0.0016;
 const HOVER_AMPLITUDE = 0.11;
