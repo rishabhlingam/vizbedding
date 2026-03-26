@@ -333,7 +333,10 @@ function PointsAndLines({
     const [x, y, z] = arr
       ? [arr[selectedIndex * 3], arr[selectedIndex * 3 + 1], arr[selectedIndex * 3 + 2]]
       : scalePoint(points3D[selectedIndex]);
-    labelEl.textContent = `(${x.toFixed(2)}, ${y.toFixed(2)}, ${z.toFixed(2)})`;
+    const xf = x.toFixed(2);
+    const yf = y.toFixed(2);
+    const zf = z.toFixed(2);
+    labelEl.innerHTML = `(<span class="coord-x">${xf}</span>, <span class="coord-y">${yf}</span>, <span class="coord-z">${zf}</span>)`;
     labelEl.style.visibility = 'visible';
   }, [selectedIndex, points3D]);
 

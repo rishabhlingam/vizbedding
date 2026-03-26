@@ -489,6 +489,18 @@ body {
   font-weight: 600;
 }
 
+.coord-leader-text .coord-x {
+  color: #c43d3d;
+}
+
+.coord-leader-text .coord-y {
+  color: #3d9b4a;
+}
+
+.coord-leader-text .coord-z {
+  color: #3b7fc7;
+}
+
 .btn-tutorial {
   padding: 0.45rem 0.7rem;
   font-family: inherit;
