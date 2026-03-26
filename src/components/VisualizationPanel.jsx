@@ -9,13 +9,21 @@ import {
   IconEdgesFromCenter,
 } from './VizToggleIcons';
 
-const SCALE = 2.5;
+// Scales PCA-projected coordinates for rendering.
+// Increasing this spreads clusters further apart visually.
+const BASE_SCALE = 2.5;
+const SCALE = 3.2;
+const SCALE_RATIO = SCALE / BASE_SCALE;
+// Extra shaping so both seed clusters spread similarly.
+// We expand around each cluster centroid (internal) and slightly push centroids apart.
+const CLUSTER_INTERNAL_SPREAD = 1.25;
+const CLUSTER_CENTER_SPREAD = 1.15;
 const ANIM_DURATION = 1.4;
 const SIDE_POSITIONS = [
-  [4.5, 0, 0],
-  [-4.5, 0, 0],
-  [0, 4.5, 0],
-  [0, -4.5, 0],
+  [4.5 * SCALE_RATIO, 0, 0],
+  [-4.5 * SCALE_RATIO, 0, 0],
+  [0, 4.5 * SCALE_RATIO, 0],
+  [0, -4.5 * SCALE_RATIO, 0],
 ];
 
 function easeOutCubic(t) {
@@ -30,9 +38,9 @@ const LINE_BASE_OPACITY = 0.55;
 const ROTATION_SPEED = 0.0016;
 const HOVER_AMPLITUDE = 0.11;
 const HOVER_SPEED = 1.35;
-const PLANE_SIZE = 4;
+const PLANE_SIZE = 4 * SCALE_RATIO;
 const PLANE_OPACITY = 0.22;
-const AXIS_LENGTH = 2.4;
+const AXIS_LENGTH = 2.4 * SCALE_RATIO;
 const AXIS_ARROW_HEIGHT = 0.14;
 const AXIS_ARROW_RADIUS = 0.052;
 const AXIS_COLOR_X = '#c43d3d';
@@ -319,7 +327,12 @@ function PointsAndLines({
       return;
     }
 
-    const [x, y, z] = scalePoint(points3D[selectedIndex]);
+    // Show coordinates for the *rendered* positions (after any cluster spread transforms).
+    const posAttr = pointsRef.current?.geometry?.attributes?.position;
+    const arr = posAttr?.array;
+    const [x, y, z] = arr
+      ? [arr[selectedIndex * 3], arr[selectedIndex * 3 + 1], arr[selectedIndex * 3 + 2]]
+      : scalePoint(points3D[selectedIndex]);
     labelEl.textContent = `(${x.toFixed(2)}, ${y.toFixed(2)}, ${z.toFixed(2)})`;
     labelEl.style.visibility = 'visible';
   }, [selectedIndex, points3D]);
@@ -437,17 +450,54 @@ function PointsAndLines({
     const colors = new Float32Array(points3D.length * 3);
     const clusterA = new THREE.Color(CLUSTER_COLOR_A);
     const clusterB = new THREE.Color(CLUSTER_COLOR_B);
-    for (let i = 0; i < points3D.length; i++) {
-      const [x, y, z] = scalePoint(points3D[i]);
-      positions[i * 3] = x;
-      positions[i * 3 + 1] = y;
-      positions[i * 3 + 2] = z;
+
+    const n = points3D.length;
+    const basePositions = new Array(n);
+    const centroidSums = [
+      [0, 0, 0],
+      [0, 0, 0],
+    ];
+    const centroidCounts = [0, 0];
+
+    // Base positions (uniform scale) + cluster centroid estimates (in the same scaled space).
+    for (let i = 0; i < n; i++) {
+      const base = scalePoint(points3D[i]);
+      basePositions[i] = base;
       const cluster = clusters?.[i] ?? 0;
+      centroidCounts[cluster] += 1;
+      centroidSums[cluster][0] += base[0];
+      centroidSums[cluster][1] += base[1];
+      centroidSums[cluster][2] += base[2];
+    }
+
+    const centroid0 = centroidCounts[0] ? centroidSums[0].map((s) => s / centroidCounts[0]) : [0, 0, 0];
+    const centroid1 = centroidCounts[1] ? centroidSums[1].map((s) => s / centroidCounts[1]) : [0, 0, 0];
+
+    const centroid0Scaled = centroid0.map((v) => v * CLUSTER_CENTER_SPREAD);
+    const centroid1Scaled = centroid1.map((v) => v * CLUSTER_CENTER_SPREAD);
+
+    for (let i = 0; i < n; i++) {
+      const cluster = clusters?.[i] ?? 0;
+      const base = basePositions[i];
+
+      const centroid = cluster === 0 ? centroid0 : centroid1;
+      const centroidScaled = cluster === 0 ? centroid0Scaled : centroid1Scaled;
+
+      // Expand points relative to their cluster centroid (makes both clusters visually spread).
+      const vx = base[0] - centroid[0];
+      const vy = base[1] - centroid[1];
+      const vz = base[2] - centroid[2];
+
+      positions[i * 3] = centroidScaled[0] + vx * CLUSTER_INTERNAL_SPREAD;
+      positions[i * 3 + 1] = centroidScaled[1] + vy * CLUSTER_INTERNAL_SPREAD;
+      positions[i * 3 + 2] = centroidScaled[2] + vz * CLUSTER_INTERNAL_SPREAD;
+
       const c = cluster === 0 ? clusterA : clusterB;
       colors[i * 3] = c.r;
       colors[i * 3 + 1] = c.g;
       colors[i * 3 + 2] = c.b;
     }
+
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
@@ -676,8 +726,8 @@ export function VisualizationPanel({ points3D, edges, selectedIndex, clusters })
       }}
     >
       <svg ref={leaderSvgRef} className="coord-leader-svg" aria-hidden="true">
-        <line ref={leaderHorizLineRef} x1="0" y1="0" x2="0" y2="0" stroke="rgba(0,0,0,0.55)" strokeWidth="1" visibility="hidden" />
-        <line ref={leaderSlantLineRef} x1="0" y1="0" x2="0" y2="0" stroke="rgba(0,0,0,0.55)" strokeWidth="1" visibility="hidden" />
+        <line ref={leaderHorizLineRef} x1="0" y1="0" x2="0" y2="0" stroke="rgba(0,0,0,0.55)" strokeWidth="1" strokeDasharray="4 4" visibility="hidden" />
+        <line ref={leaderSlantLineRef} x1="0" y1="0" x2="0" y2="0" stroke="rgba(0,0,0,0.55)" strokeWidth="1" strokeDasharray="4 4" visibility="hidden" />
       </svg>
       <div ref={coordLabelRef} className="coord-leader-text" />
       <div className="viz-toggles">
@@ -799,7 +849,7 @@ export function VisualizationPanel({ points3D, edges, selectedIndex, clusters })
         <div className="viz-toggles__divider" />
       </div>
       <Canvas
-        camera={{ position: [2, 2, 6], fov: 48 }}
+        camera={{ position: [2, 2, 10], fov: 48 }}
         frameloop="always"
         onPointerDown={() => setCanvasDragging(true)}
       >
