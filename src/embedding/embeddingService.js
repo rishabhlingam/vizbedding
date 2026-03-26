@@ -17,14 +17,18 @@ function loadCache() {
       const parsed = JSON.parse(raw);
       cache = new Map(Object.entries(parsed));
     }
-  } catch (_) {}
+  } catch {
+    // ignore cache read failures
+  }
 }
 
 function saveCache() {
   try {
     const obj = Object.fromEntries(cache);
     localStorage.setItem(CACHE_KEY, JSON.stringify(obj));
-  } catch (_) {}
+  } catch {
+    // ignore cache write failures
+  }
 }
 
 export function getCachedEmbedding(sentence) {

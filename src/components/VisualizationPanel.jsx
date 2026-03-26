@@ -1,6 +1,6 @@
 import { useRef, useMemo, useState, useEffect } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { TrackballControls } from '@react-three/drei';
+import { Html, TrackballControls } from '@react-three/drei';
 import * as THREE from 'three';
 import {
   IconPlanes,
@@ -38,6 +38,8 @@ const AXIS_ARROW_RADIUS = 0.052;
 const AXIS_COLOR_X = '#c43d3d';
 const AXIS_COLOR_Y = '#3d9b4a';
 const AXIS_COLOR_Z = '#3b7fc7';
+const CLUSTER_COLOR_A = AXIS_COLOR_X;
+const CLUSTER_COLOR_B = AXIS_COLOR_Z;
 const ORIGIN_POINT_RADIUS = 0.06;
 const EMPHASIS_RING_RADIUS = 0.25;
 const EMPHASIS_RING_SPIN_SPEED = 0.006;
@@ -242,6 +244,7 @@ function AxisLines({ showAxisX, showAxisY, showAxisZ }) {
 function PointsAndLines({
   points3D,
   edges,
+  clusters,
   autoRotateY,
   hoverBob,
   referenceFrameMode,
@@ -258,10 +261,11 @@ function PointsAndLines({
   const groupRef = useRef();
   const pointsRef = useRef();
   const prevPointsRef = useRef([]);
-  const [isAnimating, setIsAnimating] = useState(false);
+  const isAnimatingRef = useRef(false);
   const animFromRef = useRef(null);
   const animToRef = useRef(null);
   const animStartRef = useRef(null);
+
 
   useEffect(() => {
     if (points3D.length === 0) {
@@ -289,7 +293,7 @@ function PointsAndLines({
       animFromRef.current = fromPositions;
       animToRef.current = toPositions;
       animStartRef.current = null;
-      setIsAnimating(true);
+      isAnimatingRef.current = true;
     }
 
     prevPointsRef.current = points3D;
@@ -308,7 +312,7 @@ function PointsAndLines({
       groupRef.current.position.y = 0;
     }
 
-    if (!isAnimating || !animFromRef.current || !animToRef.current || !pointsRef.current?.geometry)
+    if (!isAnimatingRef.current || !animFromRef.current || !animToRef.current || !pointsRef.current?.geometry)
       return;
 
     if (animStartRef.current === null) animStartRef.current = state.clock.elapsedTime;
@@ -331,19 +335,22 @@ function PointsAndLines({
     if (t >= 1) {
       animFromRef.current = null;
       animToRef.current = null;
-      setIsAnimating(false);
+      isAnimatingRef.current = false;
     }
   });
 
   const pointGeometry = useMemo(() => {
     const positions = new Float32Array(points3D.length * 3);
     const colors = new Float32Array(points3D.length * 3);
-    const c = new THREE.Color('#000000');
+    const clusterA = new THREE.Color(CLUSTER_COLOR_A);
+    const clusterB = new THREE.Color(CLUSTER_COLOR_B);
     for (let i = 0; i < points3D.length; i++) {
       const [x, y, z] = scalePoint(points3D[i]);
       positions[i * 3] = x;
       positions[i * 3 + 1] = y;
       positions[i * 3 + 2] = z;
+      const cluster = clusters?.[i] ?? 0;
+      const c = cluster === 0 ? clusterA : clusterB;
       colors[i * 3] = c.r;
       colors[i * 3 + 1] = c.g;
       colors[i * 3 + 2] = c.b;
@@ -352,7 +359,7 @@ function PointsAndLines({
     geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
     return geo;
-  }, [points3D]);
+  }, [points3D, clusters]);
 
   const validEdges = useMemo(() => {
     return edges.filter(
@@ -390,7 +397,7 @@ function PointsAndLines({
       const posArr = posAttr.array;
       let idx = 0;
       for (let i = 0; i < points3D.length; i++) {
-        if (isAnimating && i === newPointIndex) continue;
+        if (isAnimatingRef.current && i === newPointIndex) continue;
         const x = pointPositions[i * 3];
         const y = pointPositions[i * 3 + 1];
         const z = pointPositions[i * 3 + 2];
@@ -411,7 +418,7 @@ function PointsAndLines({
       const posArr = posAttr.array;
       let idx = 0;
       for (const [i, j] of validEdges) {
-        if (isAnimating && (i === newPointIndex || j === newPointIndex)) continue;
+        if (isAnimatingRef.current && (i === newPointIndex || j === newPointIndex)) continue;
         posArr[idx * 6] = pointPositions[i * 3];
         posArr[idx * 6 + 1] = pointPositions[i * 3 + 1];
         posArr[idx * 6 + 2] = pointPositions[i * 3 + 2];
@@ -443,6 +450,18 @@ function PointsAndLines({
             <points ref={pointsRef} geometry={pointGeometry}>
               <pointsMaterial size={POINT_SIZE} vertexColors sizeAttenuation transparent opacity={0.9} />
             </points>
+            {selectedIndex != null &&
+              selectedIndex >= 0 &&
+              selectedIndex < points3D.length && (
+                <Html position={scalePoint(points3D[selectedIndex])} center style={{ pointerEvents: 'none' }}>
+                  <div className="coord-label">
+                    {(() => {
+                      const [x, y, z] = scalePoint(points3D[selectedIndex]);
+                      return `(${x.toFixed(2)}, ${y.toFixed(2)}, ${z.toFixed(2)})`;
+                    })()}
+                  </div>
+                </Html>
+              )}
             {showEdges && edgeMode === 'points' && (
               <lineSegments ref={lineSegmentsRef} geometry={lineSegmentsGeo}>
                 <lineBasicMaterial
@@ -481,6 +500,7 @@ function PointsAndLines({
 function SceneContent({
   points3D,
   edges,
+  clusters,
   autoRotateY,
   hoverBob,
   referenceFrameMode,
@@ -494,6 +514,8 @@ function SceneContent({
   edgeMode,
   selectedIndex,
 }) {
+  const controlsRef = useRef();
+
   return (
     <>
       <ambientLight intensity={0.6} />
@@ -502,6 +524,7 @@ function SceneContent({
       <PointsAndLines
         points3D={points3D}
         edges={edges}
+        clusters={clusters}
         autoRotateY={autoRotateY}
         hoverBob={hoverBob}
         referenceFrameMode={referenceFrameMode}
@@ -516,6 +539,7 @@ function SceneContent({
         selectedIndex={selectedIndex}
       />
       <TrackballControls
+        ref={controlsRef}
         target={[0, 0, 0]}
         dynamicDampingFactor={0.1}
       />
@@ -523,7 +547,7 @@ function SceneContent({
   );
 }
 
-export function VisualizationPanel({ points3D, edges, selectedIndex }) {
+export function VisualizationPanel({ points3D, edges, selectedIndex, clusters }) {
   const [pointerInsidePanel, setPointerInsidePanel] = useState(false);
   const [canvasDragging, setCanvasDragging] = useState(false);
   const [referenceFrameMode, setReferenceFrameMode] = useState('axes'); // 'planes' | 'axes'
@@ -674,6 +698,7 @@ export function VisualizationPanel({ points3D, edges, selectedIndex }) {
             </span>
           </div>
         </div>
+        <div className="viz-toggles__divider" />
       </div>
       <Canvas
         camera={{ position: [2, 2, 6], fov: 48 }}
@@ -683,6 +708,7 @@ export function VisualizationPanel({ points3D, edges, selectedIndex }) {
         <SceneContent
           points3D={points3D}
           edges={edges}
+          clusters={clusters}
           autoRotateY={autoRotateY}
           hoverBob={hoverBob}
           referenceFrameMode={referenceFrameMode}

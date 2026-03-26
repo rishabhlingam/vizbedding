@@ -1,9 +1,28 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
-export function DataEntryPanel({ sentences, onAddSentence, onClear, selectedIndex, onSelectSentence }) {
+export function DataEntryPanel({
+  sentencesMeta,
+  seedCount,
+  userSentenceCount,
+  maxUserSentences,
+  onAddSentence,
+  onClear,
+  selectedIndex,
+  onSelectSentence,
+  onRemoveUserSentence,
+}) {
   const [input, setInput] = useState('');
 
+  const canAddMore = userSentenceCount < maxUserSentences;
+  const addDisabled = !canAddMore;
+
+  const countLabel = useMemo(() => {
+    const total = seedCount + userSentenceCount;
+    return `${total} / ${seedCount + maxUserSentences} sentences`;
+  }, [seedCount, userSentenceCount, maxUserSentences]);
+
   const handleAdd = () => {
+    if (!canAddMore) return;
     const text = input.trim();
     if (text) {
       onAddSentence(text);
@@ -24,18 +43,35 @@ export function DataEntryPanel({ sentences, onAddSentence, onClear, selectedInde
         Clear viz
       </button>
       <h3>Sentences</h3>
-      <p className="sentence-count">{sentences.length} sentences</p>
+      <p className="sentence-count">{countLabel}</p>
       <div className="sentence-list">
-        {sentences.map((s, i) => (
+        {sentencesMeta.map((s) => (
           <div
-            key={i}
-            className={`sentence-row ${selectedIndex === i ? 'sentence-row--selected' : ''}`}
-            onClick={() => onSelectSentence?.(i)}
+            key={s.index}
+            className={[
+              'sentence-row',
+              s.cluster === 0 ? 'sentence-row--cluster-a' : 'sentence-row--cluster-b',
+              selectedIndex === s.index ? 'sentence-row--selected' : '',
+            ].join(' ')}
+            onClick={() => onSelectSentence?.(s.index)}
             role="button"
             tabIndex={0}
-            onKeyDown={(e) => e.key === 'Enter' && onSelectSentence?.(i)}
+            onKeyDown={(e) => e.key === 'Enter' && onSelectSentence?.(s.index)}
           >
-            {s}
+            <div className="sentence-row__text">{s.text}</div>
+            {!s.isSeed && (
+              <button
+                type="button"
+                className="btn-sentence-remove"
+                aria-label="Remove sentence"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRemoveUserSentence?.(s.index);
+                }}
+              >
+                ×
+              </button>
+            )}
           </div>
         ))}
       </div>
@@ -46,8 +82,9 @@ export function DataEntryPanel({ sentences, onAddSentence, onClear, selectedInde
           onKeyDown={handleKeyDown}
           placeholder="Enter a sentence..."
           rows={2}
+          disabled={addDisabled}
         />
-        <button type="button" onClick={handleAdd} className="btn-add">
+        <button type="button" onClick={handleAdd} className="btn-add" disabled={addDisabled}>
           Add sentence
         </button>
       </div>
