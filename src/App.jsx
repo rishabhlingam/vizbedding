@@ -193,7 +193,7 @@ export default function App() {
       },
       {
         title: 'Selection and comparing points',
-        body: 'Select a sentence from the side panel: we will be able to find its embedding in the visualization along with its co-ordinate values. With one sentence already selected, Ctrl+click (Windows/Linux) or Cmd+click (Mac) a different row sentence to get its co-ordinates along with the Euclidean distance of the two points.',
+        body: 'Click a sentence row in the side panel to select it: a dashed ring marks the point, its (x, y, z) values appear on the right (colors match the axes), and a dashed leader links the label to the point. With one sentence already selected, Ctrl+click (Windows/Linux) or Cmd+click (Mac) a different row to add a second ring and a second coordinate readout; a vertical dashed line between those readouts shows the Euclidean distance between the two displayed positions. A normal click on another row picks a new primary and clears the comparison.',
       },
     ],
     []
