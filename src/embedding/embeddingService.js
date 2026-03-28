@@ -153,8 +153,46 @@ export function getEdgesWithinDistance(positions, maxDistance, embeddings) {
   return edges;
 }
 
+/**
+ * From a candidate edge list, keep a subset so each vertex has at most
+ * `maxPerVertex` incident edges. Prefers shorter edges (Euclidean distance in
+ * `positions`, same space as getEdgesWithinDistance).
+ *
+ * Greedy: sort candidates by length ascending, add [i,j,w] only if
+ * degree(i) < maxPerVertex and degree(j) < maxPerVertex.
+ */
+export function limitEdgesPerVertex(edges, positions, maxPerVertex) {
+  if (!edges.length || maxPerVertex <= 0) return [];
+  const n = positions.length;
+  const degree = new Array(n).fill(0);
+
+  const scored = edges.map(([i, j, w]) => {
+    const pi = positions[i];
+    const pj = positions[j];
+    const dx = pi[0] - pj[0];
+    const dy = pi[1] - pj[1];
+    const dz = pi[2] - pj[2];
+    const distSq = dx * dx + dy * dy + dz * dz;
+    return { i, j, w, distSq };
+  });
+  scored.sort((a, b) => a.distSq - b.distSq);
+
+  const out = [];
+  for (const { i, j, w } of scored) {
+    if (degree[i] < maxPerVertex && degree[j] < maxPerVertex) {
+      out.push([i, j, w]);
+      degree[i]++;
+      degree[j]++;
+    }
+  }
+  return out;
+}
+
 /** PCA-space cutoff; tune to show tighter or looser local neighborhoods. */
 export const DEFAULT_EDGE_MAX_DISTANCE = 0.40;
+
+/** Max incident edges per point after distance filtering. */
+export const DEFAULT_MAX_EDGES_PER_VERTEX = 4;
 
 export function projectTo3D(embeddings) {
   const arr = embeddings.map((e) => Array.from(e));

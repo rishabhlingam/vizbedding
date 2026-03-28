@@ -5,7 +5,9 @@ import {
   computeEmbeddings,
   projectTo3D,
   getEdgesWithinDistance,
+  limitEdgesPerVertex,
   DEFAULT_EDGE_MAX_DISTANCE,
+  DEFAULT_MAX_EDGES_PER_VERTEX,
   cosineSimilarity,
 } from './embedding/embeddingService';
 import { SEED_SENTENCES } from './data/seedSentences';
@@ -54,10 +56,15 @@ export default function App() {
         return;
       }
       const positions = projectTo3D(embeddings);
-      const edgeList = getEdgesWithinDistance(
+      const candidates = getEdgesWithinDistance(
         positions,
         DEFAULT_EDGE_MAX_DISTANCE,
         embeddings
+      );
+      const edgeList = limitEdgesPerVertex(
+        candidates,
+        positions,
+        DEFAULT_MAX_EDGES_PER_VERTEX
       );
 
       // Cluster assignment for stable 2-cluster pedagogy:
