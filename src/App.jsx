@@ -181,19 +181,19 @@ export default function App() {
     () => [
       {
         title: 'Welcome to VIZBEDDING',
-        body: 'Each sentence becomes a point in 3D embedding space. Points are colored by which of the two seed clusters they belong to.',
+        body: 'Each sentence is turned into a vector with a small on-device model, then projected to 3D for display. Points are colored red or blue according to which of the two clusters they are closest to in embedding space (Technology vs Food).',
       },
       {
-        title: 'Add sentences',
-        body: 'Use the panel on the right to add up to 10 user sentences. When you add a sentence, the visualization recomputes embeddings locally in your browser.',
+        title: 'Sentences panel',
+        body: 'Use “Add sentence” to append up to 10 of your own lines; the app recomputes embeddings in the browser each time the list changes. (The first visit downloads the model). “Clear viz” removes only your added sentences and leaves the built-in seed list.',
       },
       {
-        title: 'Select a sentence',
-        body: 'Click a sentence card to highlight its embedding with a dotted ring. The (x, y, z) coordinates for that point appear with a leader line. With a sentence already selected, Ctrl+click or Cmd+click another card to show its coordinates too, stacked with the Euclidean distance between the two displayed points.',
+        title: '3D view and controls',
+        body: 'Drag on the plot to rotate the Visualization. Use the floating toggles to switch between plane-view vs. axis-view. Use the checkboxes to toggle the planes/axis, and turn edges on or off. The edges switch connects neayby points or points to the origin.',
       },
       {
-        title: 'Reset view',
-        body: 'If you get lost in orientation, use “Reset view” on the visualization panel to return to the initial camera orientation.',
+        title: 'Selection and comparing points',
+        body: 'Select a sentence from the side panel: we will be able to find its embedding in the visualization along with its co-ordinate values. With one sentence already selected, Ctrl+click (Windows/Linux) or Cmd+click (Mac) a different row sentence to get its co-ordinates along with the Euclidean distance of the two points.',
       },
     ],
     []
