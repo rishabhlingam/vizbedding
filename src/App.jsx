@@ -21,6 +21,7 @@ export default function App() {
   const [edges, setEdges] = useState([]);
   const [clustersByIndex, setClustersByIndex] = useState([]);
   const [selectedIndex, setSelectedIndex] = useState(null);
+  const [secondarySelectedIndex, setSecondarySelectedIndex] = useState(null);
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState(null);
   const [error, setError] = useState(null);
@@ -40,6 +41,8 @@ export default function App() {
       setPoints3D([]);
       setEdges([]);
       setClustersByIndex([]);
+      setSelectedIndex(null);
+      setSecondarySelectedIndex(null);
       setLoading(false);
       return;
     }
@@ -52,6 +55,8 @@ export default function App() {
         setPoints3D([]);
         setEdges([]);
         setClustersByIndex([]);
+        setSelectedIndex(null);
+        setSecondarySelectedIndex(null);
         setLoading(false);
         return;
       }
@@ -110,6 +115,8 @@ export default function App() {
       setPoints3D([]);
       setEdges([]);
       setClustersByIndex([]);
+      setSelectedIndex(null);
+      setSecondarySelectedIndex(null);
     } finally {
       setLoading(false);
       setProgress(null);
@@ -124,22 +131,41 @@ export default function App() {
     if (userSentences.length >= MAX_USER_SENTENCES) return;
     setUserSentences((prev) => [...prev, text.trim()]);
     setSelectedIndex(null);
+    setSecondarySelectedIndex(null);
   };
 
   const handleClear = () => {
     setUserSentences([]);
     setSelectedIndex(null);
+    setSecondarySelectedIndex(null);
   };
 
-  const handleSelectSentence = (index) => {
-    setSelectedIndex((prev) => (prev === index ? null : index));
-  };
+  const handleSelectSentence = useCallback((index, event) => {
+    const mod = event?.ctrlKey || event?.metaKey;
+    if (mod) {
+      setSecondarySelectedIndex((sec) => {
+        if (selectedIndex == null) return sec;
+        if (index === selectedIndex) return null;
+        return sec === index ? null : index;
+      });
+      return;
+    }
+    setSelectedIndex((prev) => {
+      if (prev === index) {
+        setSecondarySelectedIndex(null);
+        return null;
+      }
+      setSecondarySelectedIndex(null);
+      return index;
+    });
+  }, [selectedIndex]);
 
   const handleRemoveUserSentence = (combinedIndex) => {
     if (combinedIndex < seedCount) return; // seeds are fixed
     const userIndex = combinedIndex - seedCount;
     setUserSentences((prev) => prev.filter((_, i) => i !== userIndex));
     setSelectedIndex(null);
+    setSecondarySelectedIndex(null);
   };
 
   const sentencesMeta = useMemo(() => {
@@ -163,7 +189,7 @@ export default function App() {
       },
       {
         title: 'Select a sentence',
-        body: 'Click a sentence card to highlight its embedding with a dotted ring. The (x, y, z) coordinates for that point appear near the ring.',
+        body: 'Click a sentence card to highlight its embedding with a dotted ring. The (x, y, z) coordinates for that point appear with a leader line. With a sentence already selected, Ctrl+click or Cmd+click another card to show its coordinates too, stacked with the Euclidean distance between the two displayed points.',
       },
       {
         title: 'Reset view',
@@ -194,6 +220,7 @@ export default function App() {
             points3D={points3D}
             edges={edges}
             selectedIndex={selectedIndex}
+            secondarySelectedIndex={secondarySelectedIndex}
             clusters={clustersByIndex}
           />
           {loading && (
@@ -222,6 +249,7 @@ export default function App() {
             onAddSentence={handleAddSentence}
             onClear={handleClear}
             selectedIndex={selectedIndex}
+            secondarySelectedIndex={secondarySelectedIndex}
             onSelectSentence={handleSelectSentence}
             onRemoveUserSentence={handleRemoveUserSentence}
           />

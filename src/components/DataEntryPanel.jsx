@@ -8,6 +8,7 @@ export function DataEntryPanel({
   onAddSentence,
   onClear,
   selectedIndex,
+  secondarySelectedIndex,
   onSelectSentence,
   onRemoveUserSentence,
 }) {
@@ -52,8 +53,9 @@ export function DataEntryPanel({
               'sentence-row',
               s.cluster === 0 ? 'sentence-row--cluster-a' : 'sentence-row--cluster-b',
               selectedIndex === s.index ? 'sentence-row--selected' : '',
+              secondarySelectedIndex === s.index ? 'sentence-row--secondary' : '',
             ].join(' ')}
-            onClick={() => onSelectSentence?.(s.index)}
+            onClick={(e) => onSelectSentence?.(s.index, e)}
             role="button"
             tabIndex={0}
             onKeyDown={(e) => e.key === 'Enter' && onSelectSentence?.(s.index)}
