@@ -199,6 +199,17 @@ export default function App() {
     }));
   }, [allSentences, clustersByIndex, seedCount]);
 
+  const displaySentencesMeta = useMemo(() => {
+    const seeds = sentencesMeta.slice(0, seedCount);
+    const users = sentencesMeta.slice(seedCount);
+    const interleavedSeeds = [];
+    for (let i = 0; i < seedSplit; i++) {
+      if (seeds[i]) interleavedSeeds.push(seeds[i]);
+      if (seeds[i + seedSplit]) interleavedSeeds.push(seeds[i + seedSplit]);
+    }
+    return [...interleavedSeeds, ...users];
+  }, [seedCount, seedSplit, sentencesMeta]);
+
   const tourSteps = useMemo(() => {
     return [
       {
@@ -354,7 +365,7 @@ export default function App() {
         </section>
         <aside className="panel-section">
           <DataEntryPanel
-            sentencesMeta={sentencesMeta}
+            sentencesMeta={displaySentencesMeta}
             seedCount={seedCount}
             userSentenceCount={userSentences.length}
             maxUserSentences={MAX_USER_SENTENCES}
