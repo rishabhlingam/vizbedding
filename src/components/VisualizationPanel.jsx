@@ -33,6 +33,27 @@ function easeOutCubic(t) {
 function scalePoint([x, y, z]) {
   return [x * SCALE, y * SCALE, z * SCALE];
 }
+
+/** Fills a coord leader label with (x, y, z) using DOM APIs (no innerHTML). */
+function setCoordLeaderLabel(el, xf, yf, zf) {
+  el.replaceChildren();
+  el.append('(');
+  const sx = document.createElement('span');
+  sx.className = 'coord-x';
+  sx.textContent = xf;
+  el.appendChild(sx);
+  el.append(', ');
+  const sy = document.createElement('span');
+  sy.className = 'coord-y';
+  sy.textContent = yf;
+  el.appendChild(sy);
+  el.append(', ');
+  const sz = document.createElement('span');
+  sz.className = 'coord-z';
+  sz.textContent = zf;
+  el.appendChild(sz);
+  el.append(')');
+}
 const POINT_SIZE = 0.25;
 const LINE_BASE_OPACITY = 0.55;
 const ROTATION_SPEED = 0.0016;
@@ -344,7 +365,7 @@ function PointsAndLines({
     const xf = x.toFixed(2);
     const yf = y.toFixed(2);
     const zf = z.toFixed(2);
-    labelEl.innerHTML = `(<span class="coord-x">${xf}</span>, <span class="coord-y">${yf}</span>, <span class="coord-z">${zf}</span>)`;
+    setCoordLeaderLabel(labelEl, xf, yf, zf);
     labelEl.style.visibility = 'visible';
   }, [selectedIndex, points3D]);
 
@@ -377,7 +398,7 @@ function PointsAndLines({
     const xf = x.toFixed(2);
     const yf = y.toFixed(2);
     const zf = z.toFixed(2);
-    label2.innerHTML = `(<span class="coord-x">${xf}</span>, <span class="coord-y">${yf}</span>, <span class="coord-z">${zf}</span>)`;
+    setCoordLeaderLabel(label2, xf, yf, zf);
     label2.style.visibility = 'visible';
   }, [secondarySelectedIndex, selectedIndex, points3D]);
 
