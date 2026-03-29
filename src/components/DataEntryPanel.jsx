@@ -11,6 +11,9 @@ export function DataEntryPanel({
   secondarySelectedIndex,
   onSelectSentence,
   onRemoveUserSentence,
+  sentenceListRef,
+  clearButtonRef,
+  textEntryRef,
 }) {
   const [input, setInput] = useState('');
 
@@ -40,12 +43,12 @@ export function DataEntryPanel({
 
   return (
     <div className="data-entry-panel">
-      <button type="button" onClick={onClear} className="btn-clear">
+      <button ref={clearButtonRef} type="button" onClick={onClear} className="btn-clear">
         Clear viz
       </button>
       <h3>Sentences</h3>
       <p className="sentence-count">{countLabel}</p>
-      <div className="sentence-list">
+      <div ref={sentenceListRef} className="sentence-list">
         {sentencesMeta.map((s) => (
           <div
             key={s.index}
@@ -79,6 +82,7 @@ export function DataEntryPanel({
       </div>
       <div className="add-section">
         <textarea
+          ref={textEntryRef}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}

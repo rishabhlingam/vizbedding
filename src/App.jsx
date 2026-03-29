@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { DataEntryPanel } from './components/DataEntryPanel';
 import { VisualizationPanel } from './components/VisualizationPanel';
+import { TutorialTour } from './components/TutorialTour';
 import {
   computeEmbeddings,
   projectTo3D,
@@ -25,8 +26,14 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState(null);
   const [error, setError] = useState(null);
-  const [tutorialOpen, setTutorialOpen] = useState(false);
-  const [tutorialStep, setTutorialStep] = useState(0);
+  const [tourActive, setTourActive] = useState(false);
+  const [tourStepIndex, setTourStepIndex] = useState(0);
+
+  const sentenceListRef = useRef(null);
+  const clearButtonRef = useRef(null);
+  const textEntryRef = useRef(null);
+  const vizPanelRef = useRef(null);
+  const vizControlsRef = useRef(null);
 
   const seedCount = SEED_SENTENCES.length;
   const seedSplit = Math.floor(seedCount / 2); // first half = Cluster A, second half = Cluster B
@@ -132,33 +139,46 @@ export default function App() {
     setUserSentences((prev) => [...prev, text.trim()]);
     setSelectedIndex(null);
     setSecondarySelectedIndex(null);
+
+    if (tourActive && tourStepIndex === 5) {
+      setTourStepIndex((s) => Math.min(s + 1, 6));
+    }
   };
 
   const handleClear = () => {
     setUserSentences([]);
     setSelectedIndex(null);
     setSecondarySelectedIndex(null);
+
+    if (tourActive && tourStepIndex === 6) {
+      closeTour();
+    }
   };
 
   const handleSelectSentence = useCallback((index, event) => {
     const mod = event?.ctrlKey || event?.metaKey;
     if (mod) {
-      setSecondarySelectedIndex((sec) => {
-        if (selectedIndex == null) return sec;
-        if (index === selectedIndex) return null;
-        return sec === index ? null : index;
-      });
+      if (selectedIndex == null) return;
+      const nextSecondary =
+        index === selectedIndex
+          ? null
+          : secondarySelectedIndex === index
+            ? null
+            : index;
+      setSecondarySelectedIndex(nextSecondary);
+      if (tourActive && tourStepIndex === 2 && nextSecondary != null) {
+        setTourStepIndex((s) => Math.min(s + 1, 6));
+      }
       return;
     }
-    setSelectedIndex((prev) => {
-      if (prev === index) {
-        setSecondarySelectedIndex(null);
-        return null;
-      }
-      setSecondarySelectedIndex(null);
-      return index;
-    });
-  }, [selectedIndex]);
+
+    const nextPrimary = selectedIndex === index ? null : index;
+    setSelectedIndex(nextPrimary);
+    setSecondarySelectedIndex(null);
+    if (tourActive && tourStepIndex === 1 && nextPrimary != null) {
+      setTourStepIndex((s) => Math.min(s + 1, 6));
+    }
+  }, [secondarySelectedIndex, selectedIndex, tourActive, tourStepIndex]);
 
   const handleRemoveUserSentence = (combinedIndex) => {
     if (combinedIndex < seedCount) return; // seeds are fixed
@@ -177,27 +197,88 @@ export default function App() {
     }));
   }, [allSentences, clustersByIndex, seedCount]);
 
-  const tutorialSteps = useMemo(
-    () => [
+  const tourSteps = useMemo(() => {
+    return [
       {
-        title: 'Welcome to VIZBEDDING',
-        body: 'Each sentence is turned into a vector with a small on-device model, then projected to 3D for display. Points are colored red or blue according to which of the two clusters they are closest to in embedding space (Technology vs Food).',
+        title: 'How VIZBEDDING works',
+        body: 'Each sentence is turned into an embedding vector, then projected to 3D space using Principal Component Analysis (PCA) for visualization. Points are colored red or blue according to which of the two clusters (I like Food and Technology) they are closest to in embedding space (not in the 3D space).',
+        placement: 'between',
+        targets: [sentenceListRef, vizPanelRef],
+        primaryActionLabel: 'Next',
       },
       {
-        title: 'Sentences panel',
-        body: 'Use “Add sentence” to append up to 10 of your own lines; the app recomputes embeddings in the browser each time the list changes. (The first visit downloads the model). “Clear viz” removes only your added sentences and leaves the built-in seed list.',
+        title: 'Pick a sentence',
+        body: 'Click on any of the sentence to find its embedding in the 3D visualization',
+        placement: 'overVizLeft',
+        targets: [sentenceListRef],
+        primaryActionLabel: 'Next',
       },
       {
-        title: '3D view and controls',
-        body: 'Drag on the plot to rotate the Visualization. Use the floating toggles to switch between plane-view vs. axis-view. Use the checkboxes to toggle the planes/axis, and turn edges on or off. The edges switch connects neayby points or points to the origin.',
+        title: 'Compare two sentences',
+        body: 'Now ctrl/cmd + click on another sentence to get the Euclidean distance between the two points.',
+        placement: 'overVizLeft',
+        targets: [sentenceListRef],
+        primaryActionLabel: 'Next',
       },
       {
-        title: 'Selection and comparing points',
-        body: 'Click a sentence row in the side panel to select it: a dashed ring marks the point, its (x, y, z) values appear on the right (colors match the axes), and a dashed leader links the label to the point. With one sentence already selected, Ctrl+click (Windows/Linux) or Cmd+click (Mac) a different row to add a second ring and a second coordinate readout; a vertical dashed line between those readouts shows the Euclidean distance between the two displayed positions. A normal click on another row picks a new primary and clears the comparison.',
+        title: 'Rotate the plot',
+        body: 'Click and drag on the visualization panel to rotate the it.',
+        placement: 'vizTopRight',
+        targets: [vizPanelRef],
+        primaryActionLabel: 'Next',
       },
-    ],
-    []
-  );
+      {
+        title: 'Controls',
+        body: 'Use the above switched to toggle between different views',
+        placement: 'belowTarget',
+        targets: [vizControlsRef],
+        primaryActionLabel: 'Next',
+      },
+      {
+        title: 'Add your own sentences',
+        body: 'Type in your sentences and press enter or Add sentence button to add your text to the visualization. For best results, use short phrases relevant to the two categories. You can add up to 10 sentences.',
+        placement: 'leftOfTarget',
+        targets: [textEntryRef],
+        primaryActionLabel: 'Next',
+      },
+      {
+        title: 'Clear your sentences',
+        body: 'Press the Clear Viz Button to remove the sentences you added from the visualization.',
+        placement: 'leftOfTarget',
+        targets: [clearButtonRef],
+        primaryActionLabel: 'Finish',
+      },
+    ];
+  }, []);
+
+  const closeTour = useCallback(() => {
+    setTourActive(false);
+    setTourStepIndex(0);
+  }, []);
+
+  const goNext = useCallback(() => {
+    setTourStepIndex((s) => {
+      const next = s + 1;
+      if (next >= tourSteps.length) {
+        setTourActive(false);
+        return 0;
+      }
+      return next;
+    });
+  }, [tourSteps.length]);
+
+  const goBack = useCallback(() => {
+    setTourStepIndex((s) => Math.max(0, s - 1));
+  }, []);
+
+  const onTutorialAction = useCallback((type) => {
+    // Steps that can auto-advance from VisualizationPanel:
+    // - Step 4 (index 3): drag rotate
+    // - Step 5 (index 4): controls interaction
+    if (!tourActive) return;
+    if (tourStepIndex === 3 && type === 'drag') goNext();
+    if (tourStepIndex === 4 && type === 'controls') goNext();
+  }, [goNext, tourActive, tourStepIndex]);
 
   return (
     <div className="app">
@@ -207,8 +288,8 @@ export default function App() {
           type="button"
           className="btn-tutorial"
           onClick={() => {
-            setTutorialStep(0);
-            setTutorialOpen(true);
+            setTourStepIndex(0);
+            setTourActive(true);
           }}
         >
           Tutorial
@@ -222,6 +303,11 @@ export default function App() {
             selectedIndex={selectedIndex}
             secondarySelectedIndex={secondarySelectedIndex}
             clusters={clustersByIndex}
+            panelRef={vizPanelRef}
+            controlsRef={vizControlsRef}
+            onTutorialAction={onTutorialAction}
+            tutorialActive={tourActive}
+            tutorialStepIndex={tourStepIndex}
           />
           {loading && (
             <div className="loading-overlay">
@@ -252,60 +338,27 @@ export default function App() {
             secondarySelectedIndex={secondarySelectedIndex}
             onSelectSentence={handleSelectSentence}
             onRemoveUserSentence={handleRemoveUserSentence}
+            sentenceListRef={sentenceListRef}
+            clearButtonRef={clearButtonRef}
+            textEntryRef={textEntryRef}
           />
         </aside>
       </main>
 
-      {tutorialOpen && (
-        <div className="tutorial-backdrop" role="presentation" onClick={() => setTutorialOpen(false)}>
-          <div
-            className="tutorial-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Tutorial"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="tutorial-header">
-              <div className="tutorial-step">
-                Step {tutorialStep + 1} / {tutorialSteps.length}
-              </div>
-              <button
-                type="button"
-                className="tutorial-close"
-                aria-label="Close tutorial"
-                onClick={() => setTutorialOpen(false)}
-              >
-                ×
-              </button>
-            </div>
-            <div className="tutorial-title">{tutorialSteps[tutorialStep]?.title}</div>
-            <div className="tutorial-body">{tutorialSteps[tutorialStep]?.body}</div>
-            <div className="tutorial-actions">
-              <button
-                type="button"
-                className="tutorial-btn"
-                disabled={tutorialStep === 0}
-                onClick={() => setTutorialStep((s) => Math.max(0, s - 1))}
-              >
-                Back
-              </button>
-              <button
-                type="button"
-                className="tutorial-btn tutorial-btn--primary"
-                onClick={() => {
-                  if (tutorialStep >= tutorialSteps.length - 1) {
-                    setTutorialOpen(false);
-                    return;
-                  }
-                  setTutorialStep((s) => s + 1);
-                }}
-              >
-                {tutorialStep >= tutorialSteps.length - 1 ? 'Finish' : 'Next'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <TutorialTour
+        active={tourActive}
+        step={tourStepIndex}
+        totalSteps={tourSteps.length}
+        targets={tourSteps[tourStepIndex]?.targets}
+        placement={tourSteps[tourStepIndex]?.placement}
+        title={tourSteps[tourStepIndex]?.title}
+        body={tourSteps[tourStepIndex]?.body}
+        primaryActionLabel={tourSteps[tourStepIndex]?.primaryActionLabel}
+        showBack={tourStepIndex > 0}
+        onNext={goNext}
+        onBack={goBack}
+        onClose={closeTour}
+      />
     </div>
   );
 }

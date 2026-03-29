@@ -839,9 +839,16 @@ export function VisualizationPanel({
   selectedIndex,
   secondarySelectedIndex = null,
   clusters,
+  panelRef,
+  controlsRef,
+  onTutorialAction,
+  tutorialStepIndex,
+  tutorialActive,
 }) {
   const [pointerInsidePanel, setPointerInsidePanel] = useState(false);
   const [canvasDragging, setCanvasDragging] = useState(false);
+  const dragStartRef = useRef(null);
+  const dragTriggeredRef = useRef(false);
   const [referenceFrameMode, setReferenceFrameMode] = useState('axes'); // 'planes' | 'axes'
   const [showXZ, setShowXZ] = useState(false);
   const [showXY, setShowXY] = useState(false);
@@ -878,6 +885,7 @@ export function VisualizationPanel({
   return (
     <div
       className="viz-panel"
+      ref={panelRef}
       onMouseEnter={() => setPointerInsidePanel(true)}
       onMouseLeave={() => {
         setPointerInsidePanel(false);
@@ -920,7 +928,16 @@ export function VisualizationPanel({
       <div ref={coordLabelRef} className="coord-leader-text" />
       <div ref={distanceLabelRef} className="coord-leader-distance" />
       <div ref={coordLabel2Ref} className="coord-leader-text" />
-      <div className="viz-toggles">
+      <div
+        className="viz-toggles"
+        ref={controlsRef}
+        onPointerDownCapture={() => {
+          if (tutorialActive && tutorialStepIndex === 4) onTutorialAction?.('controls');
+        }}
+        onChangeCapture={() => {
+          if (tutorialActive && tutorialStepIndex === 4) onTutorialAction?.('controls');
+        }}
+      >
         <div className="viz-toggles__section">
           <div
             className="viz-toggles__edge-mode"
@@ -1041,7 +1058,26 @@ export function VisualizationPanel({
       <Canvas
         camera={{ position: [2, 2, 10], fov: 48 }}
         frameloop="always"
-        onPointerDown={() => setCanvasDragging(true)}
+        onPointerDown={(e) => {
+          setCanvasDragging(true);
+          dragStartRef.current = { x: e.clientX, y: e.clientY };
+          dragTriggeredRef.current = false;
+        }}
+        onPointerMove={(e) => {
+          if (!tutorialActive || tutorialStepIndex !== 3) return;
+          if (!dragStartRef.current || dragTriggeredRef.current) return;
+          const dx = e.clientX - dragStartRef.current.x;
+          const dy = e.clientY - dragStartRef.current.y;
+          if (dx * dx + dy * dy >= 12 * 12) {
+            dragTriggeredRef.current = true;
+            onTutorialAction?.('drag');
+          }
+        }}
+        onPointerUp={() => {
+          dragStartRef.current = null;
+          dragTriggeredRef.current = false;
+          setCanvasDragging(false);
+        }}
       >
         <SceneContent
           points3D={points3D}

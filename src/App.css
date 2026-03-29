@@ -71,6 +71,107 @@ body {
   display: block;
 }
 
+.tour-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+.tour-overlay__svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.tour-popover {
+  position: absolute;
+  width: min(420px, calc(100vw - 32px));
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 12px;
+  padding: 0.8rem 0.9rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+  color: rgba(0, 0, 0, 0.84);
+  pointer-events: auto;
+}
+
+.tour-popover__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.tour-popover__step {
+  font-size: 0.72rem;
+  color: rgba(0, 0, 0, 0.55);
+  font-weight: 600;
+}
+
+.tour-popover__close {
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.tour-popover__close:hover {
+  color: rgba(0, 0, 0, 0.85);
+}
+
+.tour-popover__title {
+  margin-top: 0.4rem;
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+
+.tour-popover__body {
+  margin-top: 0.45rem;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: rgba(0, 0, 0, 0.72);
+}
+
+.tour-popover__actions {
+  margin-top: 0.75rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.tour-popover__btn {
+  padding: 0.45rem 0.75rem;
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  cursor: pointer;
+  background: rgba(0, 0, 0, 0.03);
+  color: rgba(0, 0, 0, 0.78);
+}
+
+.tour-popover__btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.tour-popover__btn--primary {
+  background: rgba(45, 125, 210, 0.92);
+  border-color: rgba(45, 125, 210, 0.92);
+  color: white;
+}
+
+.tour-popover__btn--primary:hover {
+  background: rgba(26, 90, 158, 0.95);
+  border-color: rgba(26, 90, 158, 0.95);
+}
+
 .viz-toggles {
   position: absolute;
   top: 14px;
