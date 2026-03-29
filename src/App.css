@@ -77,6 +77,54 @@ body {
   display: block;
 }
 
+.viz-legend {
+  position: absolute;
+  left: 14px;
+  z-index: 12;
+  min-width: 156px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  font-size: 0.75rem;
+}
+
+.viz-legend__title {
+  font-size: 0.7rem;
+  color: rgba(0, 0, 0, 0.55);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 6px;
+}
+
+.viz-legend__row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 7px;
+  color: rgba(0, 0, 0, 0.78);
+}
+
+.viz-legend__row + .viz-legend__row {
+  margin-top: 4px;
+}
+
+.viz-legend__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.viz-legend__dot--a {
+  background: #c43d3d;
+}
+
+.viz-legend__dot--b {
+  background: #3b7fc7;
+}
+
 .tour-overlay {
   position: fixed;
   inset: 0;

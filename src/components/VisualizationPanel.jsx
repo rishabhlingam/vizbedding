@@ -858,6 +858,7 @@ export function VisualizationPanel({
   const [showAxisZ, setShowAxisZ] = useState(true);
   const [showEdges, setShowEdges] = useState(true);
   const [edgeMode, setEdgeMode] = useState('points'); // 'points' | 'center'
+  const [legendTop, setLegendTop] = useState(244);
 
   const leaderSvgRef = useRef();
   const leaderHorizLineRef = useRef();
@@ -871,6 +872,16 @@ export function VisualizationPanel({
 
   const autoRotateY = !pointerInsidePanel;
   const hoverBob = pointerInsidePanel && !canvasDragging;
+  const categoryCounts = useMemo(() => {
+    const counts = [0, 0];
+    const n = points3D.length;
+    for (let i = 0; i < n; i++) {
+      const c = clusters?.[i] ?? 0;
+      if (c === 1) counts[1] += 1;
+      else counts[0] += 1;
+    }
+    return counts;
+  }, [clusters, points3D.length]);
 
   useEffect(() => {
     const endDrag = () => setCanvasDragging(false);
@@ -881,6 +892,28 @@ export function VisualizationPanel({
       window.removeEventListener('pointercancel', endDrag);
     };
   }, []);
+
+  useEffect(() => {
+    const updateLegendTop = () => {
+      const controlsEl = controlsRef?.current;
+      const panelEl = panelRef?.current;
+      if (!controlsEl || !panelEl) return;
+      const c = controlsEl.getBoundingClientRect();
+      const p = panelEl.getBoundingClientRect();
+      setLegendTop(Math.max(14, c.bottom - p.top + 10));
+    };
+
+    updateLegendTop();
+    window.addEventListener('resize', updateLegendTop);
+    const ro = new ResizeObserver(updateLegendTop);
+    if (controlsRef?.current) ro.observe(controlsRef.current);
+    if (panelRef?.current) ro.observe(panelRef.current);
+
+    return () => {
+      window.removeEventListener('resize', updateLegendTop);
+      ro.disconnect();
+    };
+  }, [controlsRef, panelRef, referenceFrameMode, showXZ, showXY, showYZ, showAxisX, showAxisY, showAxisZ, showEdges, edgeMode]);
 
   return (
     <div
@@ -928,6 +961,19 @@ export function VisualizationPanel({
       <div ref={coordLabelRef} className="coord-leader-text" />
       <div ref={distanceLabelRef} className="coord-leader-distance" />
       <div ref={coordLabel2Ref} className="coord-leader-text" />
+      <div className="viz-legend" style={{ top: `${legendTop}px` }} aria-label="Category counts">
+        <div className="viz-legend__title">Categories</div>
+        <div className="viz-legend__row">
+          <span className="viz-legend__dot viz-legend__dot--a" />
+          <span>Technology</span>
+          <strong>{categoryCounts[0]}</strong>
+        </div>
+        <div className="viz-legend__row">
+          <span className="viz-legend__dot viz-legend__dot--b" />
+          <span>Food</span>
+          <strong>{categoryCounts[1]}</strong>
+        </div>
+      </div>
       <div
         className="viz-toggles"
         ref={controlsRef}

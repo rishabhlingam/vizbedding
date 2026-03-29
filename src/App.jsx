@@ -11,7 +11,12 @@ import {
   DEFAULT_MAX_EDGES_PER_VERTEX,
   cosineSimilarity,
 } from './embedding/embeddingService';
-import { SEED_SENTENCES } from './data/seedSentences';
+import {
+  CATEGORY_FOOD,
+  CATEGORY_TECH,
+  SEED_CATEGORIES,
+  SEED_SENTENCES,
+} from './data/seedSentences';
 import './App.css';
 
 const MAX_USER_SENTENCES = 10;
@@ -38,7 +43,15 @@ export default function App() {
   const vizControlsRef = useRef(null);
 
   const seedCount = SEED_SENTENCES.length;
-  const seedSplit = Math.floor(seedCount / 2); // first half = Cluster A, second half = Cluster B
+  const seedIndicesByCategory = useMemo(() => {
+    const tech = [];
+    const food = [];
+    for (let i = 0; i < seedCount; i++) {
+      if (SEED_CATEGORIES[i] === CATEGORY_FOOD) food.push(i);
+      else tech.push(i);
+    }
+    return { tech, food };
+  }, [seedCount]);
 
   const allSentences = useMemo(
     () => [...SEED_SENTENCES, ...userSentences],
@@ -82,14 +95,14 @@ export default function App() {
       );
 
       // Cluster assignment for stable 2-cluster pedagogy:
-      // - seeds are split by order into Cluster A / B
-      // - user sentences are assigned by cosine similarity to the seed centroids
+      // - seed categories are explicit in seedSentences.js (not position-based)
+      // - user sentences are assigned by cosine similarity to those centroids
       const dim = embeddings[0].length;
-      const mean = (start, end) => {
+      const meanForIndices = (indices) => {
         const v = new Float32Array(dim);
-        const count = end - start;
+        const count = indices.length;
         if (count <= 0) return v;
-        for (let i = start; i < end; i++) {
+        for (const i of indices) {
           const e = embeddings[i];
           for (let d = 0; d < dim; d++) v[d] += e[d];
         }
@@ -102,18 +115,18 @@ export default function App() {
         return v;
       };
 
-      const centroidA = mean(0, seedSplit);
-      const centroidB = mean(seedSplit, seedCount);
+      const centroidTech = meanForIndices(seedIndicesByCategory.tech);
+      const centroidFood = meanForIndices(seedIndicesByCategory.food);
 
       const clusters = new Array(allSentences.length).fill(0);
       for (let i = 0; i < seedCount; i++) {
-        clusters[i] = i < seedSplit ? 0 : 1;
+        clusters[i] = SEED_CATEGORIES[i] === CATEGORY_FOOD ? CATEGORY_FOOD : CATEGORY_TECH;
       }
       for (let i = seedCount; i < allSentences.length; i++) {
         const e = embeddings[i];
-        const simA = cosineSimilarity(e, centroidA);
-        const simB = cosineSimilarity(e, centroidB);
-        clusters[i] = simA >= simB ? 0 : 1;
+        const simTech = cosineSimilarity(e, centroidTech);
+        const simFood = cosineSimilarity(e, centroidFood);
+        clusters[i] = simTech >= simFood ? CATEGORY_TECH : CATEGORY_FOOD;
       }
 
       setPoints3D(positions);
@@ -130,7 +143,7 @@ export default function App() {
       setLoading(false);
       setProgress(null);
     }
-  }, [allSentences, seedCount, seedSplit]);
+  }, [allSentences, seedCount, seedIndicesByCategory]);
 
   useEffect(() => {
     updateVisualization();
@@ -202,13 +215,20 @@ export default function App() {
   const displaySentencesMeta = useMemo(() => {
     const seeds = sentencesMeta.slice(0, seedCount);
     const users = sentencesMeta.slice(seedCount);
+    const techSeeds = [];
+    const foodSeeds = [];
+    for (let i = 0; i < seeds.length; i++) {
+      if (SEED_CATEGORIES[i] === CATEGORY_FOOD) foodSeeds.push(seeds[i]);
+      else techSeeds.push(seeds[i]);
+    }
     const interleavedSeeds = [];
-    for (let i = 0; i < seedSplit; i++) {
-      if (seeds[i]) interleavedSeeds.push(seeds[i]);
-      if (seeds[i + seedSplit]) interleavedSeeds.push(seeds[i + seedSplit]);
+    const maxLen = Math.max(techSeeds.length, foodSeeds.length);
+    for (let i = 0; i < maxLen; i++) {
+      if (techSeeds[i]) interleavedSeeds.push(techSeeds[i]);
+      if (foodSeeds[i]) interleavedSeeds.push(foodSeeds[i]);
     }
     return [...interleavedSeeds, ...users];
-  }, [seedCount, seedSplit, sentencesMeta]);
+  }, [seedCount, sentencesMeta]);
 
   const tourSteps = useMemo(() => {
     return [
