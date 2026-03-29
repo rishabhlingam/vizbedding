@@ -234,7 +234,7 @@ export default function App() {
     return [
       {
         title: 'How VIZBEDDING works',
-        body: 'Each sentence is turned into an embedding vector, then projected to 3D space using Principal Component Analysis (PCA) for visualization. Points are colored red or blue according to which of the two clusters (I like Food and Technology) they are closest to in embedding space (not in the 3D space).',
+        body: 'Each sentence is turned into an embedding vector, then projected to 3D space using Principal Component Analysis (PCA) for visualization. Points are colored red or blue according to which of the two clusters (I like Food and AI) they are closest to in embedding space (not in the 3D space).',
         placement: 'between',
         targets: [sentenceListRef, vizPanelRef],
         primaryActionLabel: 'Next',

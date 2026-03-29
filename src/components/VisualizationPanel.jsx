@@ -965,7 +965,7 @@ export function VisualizationPanel({
         <div className="viz-legend__title">Categories</div>
         <div className="viz-legend__row">
           <span className="viz-legend__dot viz-legend__dot--a" />
-          <span>Technology</span>
+          <span>AI</span>
           <strong>{categoryCounts[0]}</strong>
         </div>
         <div className="viz-legend__row">
