@@ -1,6 +1,6 @@
 import { useRef, useMemo, useState, useEffect } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { Html, TrackballControls } from '@react-three/drei';
+import { TrackballControls } from '@react-three/drei';
 import * as THREE from 'three';
 import {
   IconPlanes,
