@@ -189,7 +189,7 @@ export function limitEdgesPerVertex(edges, positions, maxPerVertex) {
 }
 
 /** PCA-space cutoff; tune to show tighter or looser local neighborhoods. */
-export const DEFAULT_EDGE_MAX_DISTANCE = 0.40;
+export const DEFAULT_EDGE_MAX_DISTANCE = 0.37;
 
 /** Max incident edges per point after distance filtering. */
 export const DEFAULT_MAX_EDGES_PER_VERTEX = 4;
