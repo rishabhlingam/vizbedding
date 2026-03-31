@@ -2,6 +2,8 @@
 
 **VIZBEDDING** is a small browser app for exploring [sentence embeddings](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2): each phrase becomes a vector, those vectors are projected into 3D for display, and you can inspect how similar different sentences are—without sending text to a server or configuring API keys.
 
+**Live site:** [https://vizbedding.vercel.app/](https://vizbedding.vercel.app/)
+
 <!-- Optional: add screenshots under e.g. `docs/screenshots/` and uncomment or adjust the lines below. -->
 
 <!--
@@ -34,6 +36,8 @@
 4. **Edges** are built from pairs that are close in the **projected** 3D space, then trimmed so each point has at most a few edges; edge tooltips use **cosine similarity** in embedding space.
 
 ## Quick start
+
+Try the deployed app at [https://vizbedding.vercel.app/](https://vizbedding.vercel.app/), or run locally:
 
 ```bash
 npm install
