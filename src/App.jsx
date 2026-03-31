@@ -20,8 +20,7 @@ import {
 import './App.css';
 
 const MAX_USER_SENTENCES = 10;
-// Replace with your repository URL after creating the GitHub repo.
-const GITHUB_REPO_URL = 'https://github.com/your-username/your-repo';
+const GITHUB_REPO_URL = 'https://github.com/rishabhlingam/vizbedding';
 
 export default function App() {
   const [userSentences, setUserSentences] = useState([]);

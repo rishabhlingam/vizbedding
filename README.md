@@ -55,10 +55,6 @@ npm run preview   # local preview of the production build
 
 Static output is emitted to `dist/` (suitable for GitHub Pages, Netlify, Vercel, or any static host).
 
-## Configuration
-
-- **GitHub link in the app** — Set `GITHUB_REPO_URL` in `src/App.jsx` to your real repository URL so the header icon points to this repo.
-
 ## Tech stack
 
 | Area | Choice |
