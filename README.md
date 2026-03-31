@@ -70,7 +70,3 @@ npm run lint
 ```
 
 Inference runs on the **main thread** for broad browser compatibility (see comments in the codebase around worker limitations).
-
-## License
-
-No license file is present in this repository yet. Add a `LICENSE` file when you are ready to specify terms.
