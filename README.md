@@ -1,72 +1,71 @@
-# VIZBEDDING
+# Vizbedding
 
-**VIZBEDDING** is a small browser app for exploring [sentence embeddings](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2): each phrase becomes a vector, those vectors are projected into 3D for display, and you can inspect how similar different sentences are—without sending text to a server or configuring API keys.
+**Vizbedding** is a small browser app for understanding how [sentence embeddings](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2) work through 3D visualization. You don't need no API keys and you can even add your own sentences to the vizualization to see where it goes!
 
-**Live site:** [https://vizbedding.vercel.app/](https://vizbedding.vercel.app/)
+**Give it a try at -** [https://vizbedding.vercel.app/](https://vizbedding.vercel.app/)
 
-<!-- Optional: add screenshots under e.g. `docs/screenshots/` and uncomment or adjust the lines below. -->
+## Preview
 
-<!--
-<p align="center">
-  <img src="docs/screenshots/main-view.png" alt="Main view: 3D embedding cloud and sentence list" width="720" />
-</p>
-<p align="center">
-  <img src="docs/screenshots/tutorial.png" alt="In-app tutorial overlay" width="360" />
-  &nbsp;
-  <img src="docs/screenshots/similarity.png" alt="Selecting sentences and similarity edges" width="360" />
-</p>
--->
+<video src="media/preview.mp4" controls playsinline width="100%"></video>
+
+## Why?
+
+Most embedding demos, if at all they exist, either need a backend or feel like black boxes. When I was getting my hands dirty with text embeddings, I wished I had a tool that would visualize them in a 3D space and be tangible that I can play with (because playing is the best form of learning). But there were none I could find, so I made it.
+
+## What?
+
+Vizbedding embeds text with the help of **[Transformers.js](https://huggingface.co/docs/transformers.js/index)**, then **L2-normalizes** the embedding vectors, and then uses **Principal Component Analysis (PCA)** to project them onto a 3D space. **[Three.js](https://threejs.org/)** shows the points and a small **similarity graph**, edges connect points that are close in the projected space, with cosine similarity on hover. Built-in sentences are grouped into two themed seed clusters `AI` and `Food` (I like both). You can also add your own sentences which get a color based on the the nearer cluster. There is also a short in-app tutorial so someone new to follow along.
+
+
+Important to note thet neighborhoods in 3D space are suggestive and not a perfect picture of high-dimensional space.
+
+## Technologies
+
+- **React**
+- **Vite**
+- **Three.js**
+- **Transformers.js** (`@xenova/transformers`)
 
 ## Features
 
-- **Embeddings in the browser** — Uses [Transformers.js](https://github.com/xenova/transformers.js) with `Xenova/all-MiniLM-L6-v2` (~23 MB on first load from CDN). No backend; no API keys.
-- **3D visualization** — [Three.js](https://threejs.org/) + React Three Fiber: points in PCA-projected space, gentle rotation, orbit controls.
-- **Two themed seed clusters** — Built-in sentences split between **tech / AI** and **food / cooking**; colors show which cluster each point is associated with (seed labels + centroid-based assignment for your own sentences).
-- **Similarity graph** — Edges between nearby points in 3D (with per-vertex limits); hover shows **cosine similarity** between connected sentences.
-- **Selection & comparison** — Click a sentence to highlight its point. **Ctrl**/**⌘** + click a second sentence to see the **Euclidean distance** between the two points in 3D.
-- **Your own text** — Add up to 10 custom sentences, **Update visualization** refreshes embeddings; **Clear** removes only your additions (seeds stay).
-- **Tutorial** — Guided tour from the header explains PCA coloring, selection, rotation, controls, and data entry.
-- **Embedding cache** — Repeated sentences are reused via `localStorage` to avoid recomputation.
+- **Embeddings in the browser:** Uses Transformers.js with `Xenova/all-MiniLM-L6-v2`. No backend; no API keys.
+- **3D visualization:** PCA-projected points, rotation, and orbit controls.
+- **Similarity graph:** Edges are generated between nearby points in the 3D space.
+- **Selection and comparison:** `click` on the sentence on the right panel to find where it in the visualization. `click` and `ctrl/⌘ + second click` on two sentences to shows Euclidean distance between the two points in 3D.
+- **Add your own text:** Add up to 10 custom sentences and see where they get plot and how the 3D visualization change.
+- **Tutorial:** Guided tour from the header (PCA, selection, rotation, controls, data entry).
+- **Embedding cache:** Repeated sentences reuse vectors via `localStorage`.
 
-## How it works (short)
-
-1. Each sentence is embedded with mean pooling and L2-normalized vectors (same family as common sentence-transformer usage).
-2. All embedding vectors are projected to three dimensions with **PCA** (`src/utils/pca.js`) for visualization only—neighborhoods are suggestive, not exact high-dimensional geometry.
-3. Point colors reflect **two clusters** derived from seed categories and centroid similarity for user text (see `App.jsx`), not k-means in 3D.
-4. **Edges** are built from pairs that are close in the **projected** 3D space, then trimmed so each point has at most a few edges; edge tooltips use **cosine similarity** in embedding space.
-
-## Quick start
-
-Try the deployed app at [https://vizbedding.vercel.app/](https://vizbedding.vercel.app/), or run locally:
+## How to run
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173). The first run downloads the model; progress is shown in the UI.
+Open [http://localhost:5173](http://localhost:5173). The first run downloads the model.
 
 ### Production build
 
 ```bash
 npm run build
-npm run preview   # local preview of the production build
+npm run preview
 ```
 
-Static output is emitted to `dist/` (suitable for GitHub Pages, Netlify, Vercel, or any static host).
+Static output is in `dist/`.
 
-## Tech stack
-
-| Area | Choice |
-|------|--------|
-| UI | React 19, Vite 5 |
-| 3D | three.js, @react-three/fiber, @react-three/drei |
-| Embeddings | @xenova/transformers (feature-extraction pipeline) |
-
-## Development
+### Lint
 
 ```bash
 npm run lint
 ```
 
+<<<<<<< HEAD
 Inference runs on the **main thread** for broad browser compatibility (see comments in the codebase around worker limitations).
+=======
+Inference runs on the **main thread** for broad browser compatibility.
+
+## License
+
+No `LICENSE` file is in this repository yet; add one when you want to specify terms.
+>>>>>>> e9813e7 (updated readme)
