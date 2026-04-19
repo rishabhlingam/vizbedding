@@ -60,12 +60,4 @@ Static output is in `dist/`.
 npm run lint
 ```
 
-<<<<<<< HEAD
-Inference runs on the **main thread** for broad browser compatibility (see comments in the codebase around worker limitations).
-=======
 Inference runs on the **main thread** for broad browser compatibility.
-
-## License
-
-No `LICENSE` file is in this repository yet; add one when you want to specify terms.
->>>>>>> e9813e7 (updated readme)
