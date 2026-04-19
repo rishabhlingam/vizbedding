@@ -6,7 +6,7 @@
 
 ## Preview
 
-<video src="media/preview.mp4" controls playsinline width="100%"></video>
+https://github.com/user-attachments/assets/d1808146-51dd-468a-9e34-f599080306e0
 
 ## Why?
 
